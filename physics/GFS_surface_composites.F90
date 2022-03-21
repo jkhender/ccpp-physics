@@ -222,6 +222,7 @@ contains
         endif
         if (dry(i)) then                   ! Land
           uustar_lnd(i) = uustar(i)
+          if(lsm /= lsm_ruc) weasd_lnd(i) = weasd(i)
            tsurf_lnd(i) = tsfcl(i)
         ! DH*
         else
@@ -232,6 +233,7 @@ contains
         endif
         if (icy(i)) then                   ! Ice
           uustar_ice(i) = uustar(i)
+          if(lsm /= lsm_ruc) weasd_ice(i) = weasd(i)
            tsurf_ice(i) = tisfc(i)
             ep1d_ice(i) = zero
             gflx_ice(i) = zero
@@ -259,7 +261,6 @@ contains
         endif
       enddo
 !
-     if(lsm /= lsm_ruc) then ! do not do snow initialization  with RUC lsm
       if (frac_grid) then
         do i=1,im
           if (dry(i)) then
@@ -281,6 +282,7 @@ contains
           endif
         enddo
       else
+       if(lsm /= lsm_ruc) then ! do not do snow initialization  with RUC lsm
         do i=1,im
           !-- print ice point
           !if ( (xlon_d(i) > 298.6) .and.  (xlon_d(i) < 298.7) .and. &
@@ -301,8 +303,8 @@ contains
             endif
           endif
         enddo
+       endif ! lsm/=lsm_ruc
       endif
-     endif ! lsm/=lsm_ruc
 
 !     write(0,*)' minmax of ice snow=',minval(snowd_ice),maxval(snowd_ice)
 
