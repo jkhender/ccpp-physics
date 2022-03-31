@@ -29,7 +29,7 @@
      &  PCTBL, SHDTBL,                                                  &
      &  IFORTBL, RSTBL, RGLTBL, HSTBL, SNUPTBL, LAITBL, MAXALB,         &
      &  LPARAM, TOPT_DATA, CMCMAX_DATA, CFACTR_DATA,                    &
-     &  RSMAX_DATA, BARE, NATURAL, CROP, URBAN,                         &
+     &  RSMAX_DATA, BARE, GLACIER, NATURAL, CROP, URBAN,                &
      &  DEFINED_VEG, DEFINED_SOIL, DEFINED_SLOPE,                       &
      &  BB, DRYSMC, HC, MAXSMC, REFSMC, SATPSI, SATDK, SATDW,           &
      &  WLTSMC, QTZ, mosaic_soil, mosaic_lu,                            &
@@ -195,9 +195,10 @@
      &                0.,  0.,  0.,  0.,  0.,  0./) 
 
       natural = 10
-      bare = 16
       crop = 12
       urban = 13
+      glacier = 15
+      bare = 16
       endif
 !  end if veg table
 
@@ -337,7 +338,8 @@
      &            0.236, 0.000, 0.000, 0.000, 0.000, 0.000,       &
      &            0.000, 0.000, 0.000, 0.000, 0.000, 0.000/)
 
-      SATPSI   =(/0.121, 0.090, 0.218, 0.786, 0.786, 0.478,       &
+      SATPSI   =(/0.121, 0.150, 0.218, 0.786, 0.786, 0.478,       &
+      !SATPSI   =(/0.121, 0.090, 0.218, 0.786, 0.786, 0.478,       &
      &            0.299, 0.356, 0.630, 0.153, 0.490, 0.405,       &
      &            0.478, 0.000, 0.121, 0.218, 0.468, 0.069,       &
      &            0.069, 0.00,  0.00,  0.00,  0.00,  0.00,        &
