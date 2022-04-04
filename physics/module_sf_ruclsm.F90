@@ -147,7 +147,7 @@ CONTAINS
 !   ACRUNOFF - run-total surface runoff [mm]
 !   SFCEVP - total time-step evaporation in [kg/m^2]
 !   GRDFLX - soil heat flux (W/m^2: negative, if downward from surface)
-!   SNOWFALLAC - run-total snowfall accumulation [m]   
+!   SNOWFALLAC - run-total snowfall accumulation [mm]   
 !   ACSNOW - run-toral SWE of snowfall [mm]   
 !-- CHKLOWQ - is either 0 or 1 (so far set equal to 1).
 !--           used only in MYJPBL. 
@@ -2232,9 +2232,9 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
       if(ivgtyp == urban) snowfrac=min(0.75,snowfrac)
 
-!  run-total accumulated snow based on snowfall and snowmelt in [m]
+!  run-total accumulated snow based on snowfall and snowmelt in [mm]
 
-      snowfallac = snowfallac + max(0.,(newsn - rhowater/rhonewsn*smelt*delt*newsnowratio))
+      snowfallac = snowfallac + max(0.,(newsn - rhowater/rhonewsn*smelt*delt*newsnowratio))*1.e3
 
    ELSE
 !--- no snow

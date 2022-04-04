@@ -1382,7 +1382,7 @@ module lsm_ruc
         sneqv_ice(i,j) = weasd_ice(i)                  ! [mm]
         snfallac_ice(i,j) = snowfallac_ice(i)
         acsn_ice(i,j)     = acsnow_ice(i)
-        snomlt_ice(i,j)   = snowmt_ice(i) 
+        snomlt_ice(i,j)   = snowmt_ice(i)
 
         !> -- sanity checks on sneqv and snowh
         if (sneqv_ice(i,j) /= 0.0 .and. snowh_ice(i,j) == 0.0) then
