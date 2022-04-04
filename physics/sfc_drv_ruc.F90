@@ -1222,6 +1222,7 @@ module lsm_ruc
 !!\n \a runoff2 - subsurface runoff (\f$m s^{-1}\f$), drainage out bottom
 !!\n \a snoh    - phase-change heat flux from snowmelt (\f$W m^{-2}\f$)
 !
+!  --- ...  units [m/s] = [g m-2 s-1]
 !    evcw (W m-2)    - canopy water evaporation flux
 !    evbs (W m-2)    - direct soil evaporation flux
 !    trans (W m-2)   - total plant transpiration
@@ -1261,11 +1262,10 @@ module lsm_ruc
         drain (i)  = runoff2(i,j) * rhoh2o ! kg m-2 s-1
 
         wetness(i) = wet(i,j)
-
         sfcqv_lnd(i)  = qvg_lnd(i,j)
         sfcqc_lnd(i)  = qcg_lnd(i,j)
-        !  --- ...  units [m/s] = [g m-2 s-1]
-        rhosnf(i) = rhosnfr(i,j)
+
+        rhosnf(i) = rhosnfr(i,j) ! kg m-3
         acsnow_lnd(i) = acsn_lnd(i,j)     ! accum kg m-2
         snowmt_lnd(i) = snomlt_lnd(i,j)   ! accum kg m-2
 
@@ -1455,6 +1455,7 @@ module lsm_ruc
         sfcqv_ice(i)  = qvg_ice(i,j)
         sfcqc_ice(i)  = qcg_ice(i,j)
 
+        rhosnf(i) = rhosnfr(i,j) ! kg m-3
         snowfallac_ice(i) = snfallac_ice(i,j) ! kg m-2
         acsnow_ice(i)     = acsn_ice(i,j) ! kg m-2 
         snowmt_ice(i)     = snomlt_ice(i,j) ! kg m-2
