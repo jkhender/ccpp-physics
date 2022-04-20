@@ -124,37 +124,37 @@
             endif
           else
           !-- RUC lsm
-            if(chs.lt.1.E-5) then
+            !if(chs.lt.1.E-5) then
             !-- under very stable conditions use first level temperature
-              t2m(i) = t1(i)
-            else
+            !  t2m(i) = t1(i)
+            !else
               t2m(i)  = tskin(i)*wrk + t1(i)*fhi - (grav+grav)/cp
-            endif
+            !endif
         
-            if(cqs.lt.1.E-5) then
-              q2m(i)=max(qmin,q1c) ! spec. humidity
-            else
+            !if(cqs.lt.1.E-5) then
+            !  q2m(i)=max(qmin,q1c) ! spec. humidity
+            !else
               q2m(i) = qsurf(i)*wrk + max(qmin,q1c)*fhi
-            endif
+            !endif
           endif ! RUC lsm
 
         else
         !-- flux method
-          if(chs2(i).lt.1.E-5) then
+          !if(chs2(i).lt.1.E-5) then
           !-- under very stable conditions use first level temperature
-            t2m(i) = t1(i)
-          else
+          !  t2m(i) = t1(i)
+          !else
             th2m = tskin(i)*thcon - shflx(i)/chs2(i)
             t2m(i) = th2m/thcon
-          endif
+          !endif
 
-          if(cqs2(i).lt.1.E-5) then
+          !if(cqs2(i).lt.1.E-5) then
           !-- under very stable conditions use first level for 2-m mixing ratio
-            q2m(i)=max(qmin,q1c) ! spec. humidity
-          else
+          !  q2m(i)=max(qmin,q1c) ! spec. humidity
+          !else
             x2m = max(qmin,qsfcprox - evap(i)/cqs2(i)) ! mix. ratio
             q2m(i) = x2m/(1. + x2m) ! spec. humidity
-          endif
+          !endif
 
           !-- Alternative logarithmic diagnostics:
           dT = t1(i) - tskin(i)
