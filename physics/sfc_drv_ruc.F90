@@ -1041,7 +1041,11 @@ module lsm_ruc
         sneqv_lnd(i,j) = weasd_lnd(i)
         snowh_lnd(i,j) = snwdph_lnd(i) * 0.001 ! convert from mm to m
 
-        snfallac_lnd(i,j) = snowfallac_lnd(i)
+        if(kdt == 1) then
+          snfallac_lnd(i,j) = 0.
+        else
+          snfallac_lnd(i,j) = snowfallac_lnd(i)
+        endif
 
         !> -- sanity checks on sneqv and snowh
         if (sneqv_lnd(i,j) /= 0.0d0 .and. snowh_lnd(i,j) == 0.0d0) then
@@ -1380,7 +1384,11 @@ module lsm_ruc
 
         snowh_ice(i,j) = snwdph_ice(i) * 0.001         ! convert from mm to m
         sneqv_ice(i,j) = weasd_ice(i)                  ! [mm]
-        snfallac_ice(i,j) = snowfallac_ice(i)
+        if(kdt == 1) then
+          snfallac_ice(i,j) = 0.
+        else
+          snfallac_ice(i,j) = snowfallac_ice(i)
+        endif
         acsn_ice(i,j)     = acsnow_ice(i)
         snomlt_ice(i,j)   = snowmt_ice(i)
 
