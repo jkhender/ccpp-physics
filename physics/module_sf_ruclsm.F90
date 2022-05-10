@@ -533,7 +533,7 @@ CONTAINS
            SMELT(i,j) = 0.
            SNOM (i,j) = 0.
            ACSNOW(i,j) = 0.
-           SNOWFALLAC(i,j) = 0.
+           !SNOWFALLAC(i,j) = 0.
            PRECIPFR(i,j) = 0.
            RHOSNF(i,j) = -1.e3 ! non-zero flag
            SNFLX(i,j) = 0.
