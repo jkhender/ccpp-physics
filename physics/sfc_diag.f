@@ -21,11 +21,11 @@
 !!  \section general General Algorithm
 !!  \section detailed Detailed Algorithm
 !!  @{
-      subroutine sfc_diag_run (im,xlat_d,xlon_d,do_mynnsfclay,          &
+      subroutine sfc_diag_run (im,xlat_d,xlon_d,                        &
      &                    lsm,lsm_ruc,grav,cp,eps,epsm1,rocp,           &
      &                    wet,shflx,chs2,cqs2,cdq,wind,                 &
-     &                    zf,ps,u1,v1,t1,q1,prslki,evap,                &
-     &                    fm,fh,fm10,fh2,tskin,qsurf,thsfc_loc,         &
+     &                    zf,ps,u1,v1,t1,q1,prslki,evap,fm,fh,fm10,fh2, &
+     &                    fh2,tskin,qsurf,thsfc_loc,diag_flux,diag_log, &
      &                    f10m,u10m,v10m,t2m,q2m,dpt2m,errmsg,errflg    &
      &                   )
 !
@@ -34,8 +34,9 @@
       implicit none
 !
       integer, intent(in) :: im, lsm, lsm_ruc
-      logical, intent(in) :: do_mynnsfclay
       logical, intent(in) :: thsfc_loc  ! Flag for reference pot. temp.
+      logical, intent(in) :: diag_flux  ! Flag for flux method in 2-m diagnostics
+      logical, intent(in) :: diag_log   ! Flag for 2-m log diagnostics under stable conditions
       real(kind=kind_phys), intent(in) :: grav,cp,eps,epsm1,rocp
       real(kind=kind_phys), dimension(:), intent( in) ::                &
      &                      zf, ps, u1, v1, t1, q1, tskin, wet,         &
@@ -48,7 +49,7 @@
 !
 !     locals
 !
-      logical :: flux, debug_print
+      logical :: debug_print
       real(kind=kind_phys), parameter :: qmin=1.0e-8
       real(kind=kind_phys) :: q1c, qv, tem, qv1, th2m, x2m, rho
       real(kind=kind_phys) :: dT, dQ, qsfcmr, qsfcprox, ff, fac, dz1
@@ -80,9 +81,7 @@
 !  ps is in pascals
 !
 !!
-      flux = .false.
 
-      if (do_mynnsfclay .and. lsm == lsm_ruc) flux = .true.
 
       do i = 1, im
         f10m(i) = fm10(i) / fm(i)
@@ -107,7 +106,7 @@
         cqs = chs
         qsfcprox = max(qmin,qv1 + evap(i)/cqs) ! surface mix. ratio computed from the flux
 
-        if(.not. flux) then
+        if(.not. diag_flux) then
         !-- original method
           if(lsm /= lsm_ruc) then
             if(thsfc_loc) then ! Use local potential temperature
@@ -156,36 +155,38 @@
             q2m(i) = x2m/(1. + x2m) ! spec. humidity
           !endif
 
+          if(diagLog) then
           !-- Alternative logarithmic diagnostics:
-          dT = t1(i) - tskin(i)
-          dQ = qv1 - qsfcmr
-          dz1= zf(i) ! level of atm. forcing
-          IF (dT > 0.) THEN
-            ff  = MIN(MAX(1.-dT/10.,0.01), 1.0)
-            !for now, set zt = 0.05
-            fac = LOG((2.  + .05)/(0.05 + ff))/                         &
-     &          LOG((dz1 + .05)/(0.05 + ff))
-            T2_alt = tskin(i) + fac * dT
-          ELSE
-            !no alternatives (yet) for unstable conditions
-            T2_alt = t2m(i)
-          ENDIF
-
-          IF (dQ > 0.) THEN
-            ff  = MIN(MAX(1.-dQ/0.003,0.01), 1.0)
-            !-- for now, set zt = 0.05
-            fac = LOG((2.  + .05)/(0.05 + ff))/                         &
+            dT = t1(i) - tskin(i)
+            dQ = qv1 - qsfcmr
+            dz1= zf(i) ! level of atm. forcing
+            IF (dT > 0.) THEN
+              ff  = MIN(MAX(1.-dT/10.,0.01), 1.0)
+              !for now, set zt = 0.05
+              fac = LOG((2.  + .05)/(0.05 + ff))/                       &
      &            LOG((dz1 + .05)/(0.05 + ff))
-            Q2_alt = qsfcmr + fac * dQ ! mix. ratio
-            Q2_alt = Q2_alt/(1. + Q2_alt) ! spec. humidity
-          ELSE
+              T2_alt = tskin(i) + fac * dT
+            ELSE
             !no alternatives (yet) for unstable conditions
-            Q2_alt = q2m(i)
-          ENDIF
-          !-- Note: use of alternative diagnostics will make 
-          !   it cooler and drier with stable stratification
-          !t2m(i) = T2_alt 
-          !q2m(i) = Q2_alt
+              T2_alt = t2m(i)
+            ENDIF
+
+            IF (dQ > 0.) THEN
+              ff  = MIN(MAX(1.-dQ/0.003,0.01), 1.0)
+              !-- for now, set zt = 0.05
+              fac = LOG((2.  + .05)/(0.05 + ff))/                       &
+     &              LOG((dz1 + .05)/(0.05 + ff))
+              Q2_alt = qsfcmr + fac * dQ ! mix. ratio
+              Q2_alt = Q2_alt/(1. + Q2_alt) ! spec. humidity
+            ELSE
+              !no alternatives (yet) for unstable conditions
+              Q2_alt = q2m(i)
+            ENDIF
+            !-- Note: use of alternative diagnostics will make 
+            !   it cooler and drier with stable stratification
+            t2m(i) = T2_alt  
+            q2m(i) = Q2_alt
+          endif ! log method for stable regime
         endif ! flux method
 
         !-- check that T2m,Q2m values lie in the range between tskin and t1
@@ -210,7 +211,7 @@
         !-- diagnostics for a test point with known lat/lon
           if (abs(xlat_d(i)-testptlat).lt.0.2 .and.                     &
      &      abs(xlon_d(i)-testptlon).lt.0.2)then
-            print 100,'(ruc_lsm_diag)  i=',i,                            &
+            print 100,'(ruc_lsm_diag)  i=',i,                           &
      &      '  lat,lon=',xlat_d(i),xlon_d(i),'zf ',zf(i),               &
      &      'tskin ',tskin(i),'t2m ',t2m(i),'t1',t1(i),'shflx',shflx(i),&
      &      'qsurf ',qsurf(i),'qsfcprox ',qsfcprox,'q2m ',q2m(i),       &

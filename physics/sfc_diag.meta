@@ -30,13 +30,6 @@
   type = real
   kind = kind_phys
   intent = in
-[do_mynnsfclay]
-  standard_name = flag_for_mellor_yamada_nakanishi_niino_surface_layer_scheme
-  long_name = flag to activate MYNN surface layer
-  units = flag
-  dimensions = ()
-  type = logical
-  intent = in
 [lsm]
   standard_name = control_for_land_surface_scheme
   long_name = flag for land surface model
@@ -214,6 +207,20 @@
 [thsfc_loc]
   standard_name = flag_for_reference_pressure_theta
   long_name = flag for reference pressure in theta calculation
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[diag_flux]
+  standard_name = flag_for_flux_method_in_2m_diagnostics
+  long_name = flag for flux method in 2-m diagnostics
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[diag_log]
+  standard_name = flag_for_log_method_in_2m_diagnostics
+  long_name = flag for log method in 2-m diagnostics
   units = flag
   dimensions = ()
   type = logical
