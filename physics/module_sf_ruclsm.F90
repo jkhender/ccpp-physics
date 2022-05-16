@@ -526,7 +526,7 @@ CONTAINS
          soiliqw(k)=0.
        enddo
 
-     else 
+     !else 
      !-- restart
        DO J=jts,jte
          DO i=its,ite
@@ -562,11 +562,11 @@ CONTAINS
          ENDDO
        ENDDO
 
-       infiltrp = 0.
-       do k=1,nsl
-         soilice(k)=0.
-         soiliqw(k)=0.
-       enddo
+     !  infiltrp = 0.
+     !  do k=1,nsl
+     !    soilice(k)=0.
+     !    soiliqw(k)=0.
+     !  enddo
 
       endif ! cold start
      endif ! init==.true.

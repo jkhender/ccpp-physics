@@ -189,9 +189,10 @@
           endif ! log method for stable regime
         endif ! flux method
 
-        !-- check that T2m,Q2m values lie in the range between tskin and t1
+        !-- check that T2m values lie in the range between tskin and t1
         x2m     = max(min(tskin(i),t1(i)) , t2m(i))
         t2m(i)  = min(max(tskin(i),t1(i)) , x2m)
+        !-- check that Q2m values lie in the range between qsurf and q1
         x2m    = max(min(qsurf(i),q1c) , q2m(i))
         q2m(i) = min(max(qsurf(i),q1c) , x2m)
 
