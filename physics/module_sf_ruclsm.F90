@@ -531,9 +531,6 @@ CONTAINS
        DO J=jts,jte
          DO i=its,ite
            SMELT(i,j) = 0.
-           SNOM (i,j) = 0.
-           ACSNOW(i,j) = 0.
-           SNOWFALLAC(i,j) = 0.
            PRECIPFR(i,j) = 0.
            RHOSNF(i,j) = -1.e3 ! non-zero flag
            SNFLX(i,j) = 0.
@@ -544,7 +541,6 @@ CONTAINS
            RUNOFF2(i,j) = 0.
            SFCRUNOFF(i,j) = 0.
            UDRUNOFF(i,j) = 0.
-           ACRUNOFF(i,j) = 0.
            emissl (i,j) = 0.
            budget(i,j) = 0.
            acbudget(i,j) = 0.
