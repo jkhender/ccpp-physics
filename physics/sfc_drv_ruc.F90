@@ -671,29 +671,29 @@ module lsm_ruc
           canopy_old(i)          = canopy(i)
           !srflag_old(i)          = srflag(i)
           ! for land
-          acsnow_lnd_old(i)      = acsnow_lnd(i)
           weasd_lnd_old(i)       = weasd_lnd(i)
           snwdph_lnd_old(i)      = snwdph_lnd(i)
           tskin_lnd_old(i)       = tskin_lnd(i)
           tsnow_lnd_old(i)       = tsnow_lnd(i)
-          snowfallac_lnd_old(i)  = snowfallac_lnd(i)
           sfcqv_lnd_old(i)       = sfcqv_lnd(i)
           sfcqc_lnd_old(i)       = sfcqc_lnd(i)
           z0rl_lnd_old(i)        = z0rl_lnd(i)
           sncovr1_lnd_old(i)     = sncovr1_lnd(i)
           snowmt_lnd_old(i)      = snowmt_lnd(i)
+          acsnow_lnd_old(i)      = acsnow_lnd(i)
+          snowfallac_lnd_old(i)  = snowfallac_lnd(i)
           ! for ice
           weasd_ice_old(i)       = weasd_ice(i)
           snwdph_ice_old(i)      = snwdph_ice(i)
           tskin_ice_old(i)       = tskin_ice(i)
           tsnow_ice_old(i)       = tsnow_ice(i)
-          acsnow_ice_old(i)      = acsnow_ice(i)
-          snowfallac_ice_old(i)  = snowfallac_ice(i)
           sfcqv_ice_old(i)       = sfcqv_ice(i)
           sfcqc_ice_old(i)       = sfcqc_ice(i)
           z0rl_ice_old(i)        = z0rl_ice(i)
           sncovr1_ice_old(i)     = sncovr1_ice(i)
           snowmt_ice_old(i)      = snowmt_ice(i)
+          acsnow_ice_old(i)      = acsnow_ice(i)
+          snowfallac_ice_old(i)  = snowfallac_ice(i)
 
           do k = 1, lsoil_ruc
             smois_old(i,k)  = smois(i,k)
@@ -755,9 +755,8 @@ module lsm_ruc
           acsn_lnd(i,j)     = 0.0
           snfallac_ice(i,j) = 0.0
           acsn_ice(i,j)     = 0.0
-          rhosnfr(i,j)      = 0.0
           precipfr(i,j)     = 0.0
-
+          rhosnfr(i,j)      = -1.e3
         endif
       enddo ! i=1,im
       enddo
@@ -860,8 +859,6 @@ module lsm_ruc
         rainncv(i,j)    = rhoh2o * rainnc(i)                   ! total time-step explicit precip [mm]
         graupelncv(i,j) = rhoh2o * graupel(i)
         snowncv(i,j)    = rhoh2o * snow(i)
-        acsn_lnd(i,j)   = acsnow_lnd(i)
-        snomlt_lnd(i,j) = snowmt_lnd(i) 
         if (debug_print) then
         !-- diagnostics for a test point with known lat/lon
         if (abs(xlat_d(i)-testptlat).lt.0.2 .and.   &
@@ -1041,7 +1038,16 @@ module lsm_ruc
         sneqv_lnd(i,j) = weasd_lnd(i)
         snowh_lnd(i,j) = snwdph_lnd(i) * 0.001 ! convert from mm to m
 
-        snfallac_lnd(i,j) = snowfallac_lnd(i)
+        if(kdt == 1) then
+          snfallac_lnd(i,j) = 0.
+          acsn_lnd(i,j)     = 0.
+          snomlt_lnd(i,j)   = 0.
+        else
+        !-- run-total accumulation
+          snfallac_lnd(i,j) = snowfallac_lnd(i)
+          acsn_lnd(i,j)     = acsnow_lnd(i)
+          snomlt_lnd(i,j)   = snowmt_lnd(i)
+        endif
 
         !> -- sanity checks on sneqv and snowh
         if (sneqv_lnd(i,j) /= 0.0d0 .and. snowh_lnd(i,j) == 0.0d0) then
@@ -1380,9 +1386,15 @@ module lsm_ruc
 
         snowh_ice(i,j) = snwdph_ice(i) * 0.001         ! convert from mm to m
         sneqv_ice(i,j) = weasd_ice(i)                  ! [mm]
-        snfallac_ice(i,j) = snowfallac_ice(i)
-        acsn_ice(i,j)     = acsnow_ice(i)
-        snomlt_ice(i,j)   = snowmt_ice(i)
+        if(kdt == 1) then
+          snfallac_ice(i,j) = 0.
+          acsn_ice(i,j)     = 0.
+          snomlt_ice(i,j)   = 0.
+        else
+          snfallac_ice(i,j) = snowfallac_ice(i)
+          acsn_ice(i,j)     = acsnow_ice(i)
+          snomlt_ice(i,j)   = snowmt_ice(i)
+        endif
 
         !> -- sanity checks on sneqv and snowh
         if (sneqv_ice(i,j) /= 0.0 .and. snowh_ice(i,j) == 0.0) then
