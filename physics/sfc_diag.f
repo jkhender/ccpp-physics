@@ -25,7 +25,7 @@
      &                    lsm,lsm_ruc,grav,cp,eps,epsm1,rocp,           &
      &                    wet,shflx,chs2,cqs2,cdq,wind,                 &
      &                    zf,ps,u1,v1,t1,q1,prslki,evap,fm,fh,fm10,fh2, &
-     &                    fh2,tskin,qsurf,thsfc_loc,diag_flux,diag_log, &
+     &                    tskin,qsurf,thsfc_loc,diag_flux,diag_log,     &
      &                    f10m,u10m,v10m,t2m,q2m,dpt2m,errmsg,errflg    &
      &                   )
 !
@@ -155,7 +155,7 @@
             q2m(i) = x2m/(1. + x2m) ! spec. humidity
           !endif
 
-          if(diagLog) then
+          if(diag_log) then
           !-- Alternative logarithmic diagnostics:
             dT = t1(i) - tskin(i)
             dQ = qv1 - qsfcmr
