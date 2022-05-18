@@ -236,74 +236,6 @@
 ! Many of these changes are now documented in references listed above.
 !====================================================================
 
- module bl_mynn_common
-
-!------------------------------------------
-!Define Model-specific constants/parameters.
-!This module will be used at the initialization stage
-!where all model-specific constants are read and saved into
-!memory. This module is then used again in the MYNN-EDMF. All
-!MYNN-specific constants are declared globally in the main 
-!module (module_bl_mynn) further below:
-!------------------------------------------
-
-! The following 5-6 lines are the only lines in this file that are not 
-! universal for all dycores... Any ideas how to universalize it?
-! For MPAS:
-! use mpas_kind_types,only: kind_phys => RKIND
-! For CCPP:
-  use machine,  only : kind_phys
-
- implicit none
- save
-
-! To be specified from dycore
- real(kind=kind_phys):: cp           != 7.*r_d/2. (J/kg/K)
- real(kind=kind_phys):: cpv          != 4.*r_v    (J/kg/K) Spec heat H2O gas
- real(kind=kind_phys):: cice         != 2106.     (J/kg/K) Spec heat H2O ice
- real(kind=kind_phys):: cliq         != 4190.     (J/kg/K) Spec heat H2O liq
- real(kind=kind_phys):: p608         != R_v/R_d-1.
- real(kind=kind_phys):: ep_2         != R_d/R_v
- real(kind=kind_phys):: grav         != accel due to gravity
- real(kind=kind_phys):: karman       != von Karman constant
- real(kind=kind_phys):: t0c          != temperature of water at freezing, 273.15 K
- real(kind=kind_phys):: rcp          != r_d/cp
- real(kind=kind_phys):: r_d          != 287.  (J/kg/K) gas const dry air
- real(kind=kind_phys):: r_v          != 461.6 (J/kg/K) gas const water
- real(kind=kind_phys):: xlf          != 0.35E6 (J/kg) fusion at 0 C
- real(kind=kind_phys):: xlv          != 2.50E6 (J/kg) vaporization at 0 C
- real(kind=kind_phys):: xls          != 2.85E6 (J/kg) sublimation
- real(kind=kind_phys):: rvovrd       != r_v/r_d != 1.608
-
-! Specified locally
- real(kind=kind_phys),parameter:: zero   = 0.0
- real(kind=kind_phys),parameter:: half   = 0.5
- real(kind=kind_phys),parameter:: one    = 1.0
- real(kind=kind_phys),parameter:: two    = 2.0
- real(kind=kind_phys),parameter:: onethird  = 1./3.
- real(kind=kind_phys),parameter:: twothirds = 2./3.
- real(kind=kind_phys),parameter:: tref  = 300.0   ! reference temperature (K)
- real(kind=kind_phys),parameter:: TKmin = 253.0   ! for total water conversion, Tripoli and Cotton (1981)
- real(kind=kind_phys),parameter:: p1000mb=100000.0
- real(kind=kind_phys),parameter:: svp1  = 0.6112 !(kPa)
- real(kind=kind_phys),parameter:: svp2  = 17.67  !(dimensionless)
- real(kind=kind_phys),parameter:: svp3  = 29.65  !(K)
- real(kind=kind_phys),parameter:: tice  = 240.0  !-33 (C), temp at saturation w.r.t. ice
-
-! To be derived in the init routine
- real(kind=kind_phys):: ep_3         != 1.-ep_2 != 0.378
- real(kind=kind_phys):: gtr          != grav/tref
- real(kind=kind_phys):: rk           != cp/r_d
- real(kind=kind_phys):: tv0          != p608*tref
- real(kind=kind_phys):: tv1          != (1.+p608)*tref
- real(kind=kind_phys):: xlscp        != (xlv+xlf)/cp
- real(kind=kind_phys):: xlvcp        != xlv/cp
- real(kind=kind_phys):: g_inv        != 1./grav
-
- end module bl_mynn_common
-
-!==================================================================
-
 MODULE module_bl_mynn
 
   use bl_mynn_common,only: &
@@ -465,7 +397,7 @@ CONTAINS
        &nchem,kdvel,ndvel,              & !Smoke/Chem variables
        &chem3d, vdep,                   &
        &frp,EMIS_ANT_NO,                & ! JLS/RAR to adjust exchange coeffs
-       &mix_chem,fire_turb,             & ! end smoke/chem variables
+       &mix_chem,fire_turb,rrfs_smoke,  & ! end smoke/chem variables
 
        &Tsq,Qsq,Cov,                    &
        &RUBLTEN,RVBLTEN,RTHBLTEN,       &
@@ -498,7 +430,8 @@ CONTAINS
        &spp_pbl,pattern_spp_pbl,        &
        &RTHRATEN,                       &
        &FLAG_QC,FLAG_QI,FLAG_QNC,       &
-       &FLAG_QNI,FLAG_QNWFA,FLAG_QNIFA  &
+       &FLAG_QNI,FLAG_QNWFA,FLAG_QNIFA, &
+       &FLAG_OZONE                      &
        &,IDS,IDE,JDS,JDE,KDS,KDE        &
        &,IMS,IME,JMS,JME,KMS,KME        &
        &,ITS,ITE,JTS,JTE,KTS,KTE)
@@ -523,9 +456,9 @@ CONTAINS
     REAL,    INTENT(in) :: closure
 
     LOGICAL, INTENT(in) :: FLAG_QI,FLAG_QNI,FLAG_QC,FLAG_QNC,&
-                           FLAG_QNWFA,FLAG_QNIFA
+                           FLAG_QNWFA,FLAG_QNIFA,FLAG_OZONE
 
-    LOGICAL, INTENT(IN) :: mix_chem,fire_turb
+    LOGICAL, INTENT(IN) :: mix_chem,fire_turb,rrfs_smoke
 
     INTEGER, INTENT(in) :: &
          & IDS,IDE,JDS,JDE,KDS,KDE &
@@ -542,61 +475,65 @@ CONTAINS
 !       closure       : <= 2.5;  Level 2.5
 !                  2.5< and <3;  Level 2.6
 !                        =   3;  Level 3
+
+! SGT: Changed this to use assumed shape arrays (dimension(:,:,:)) with no "optional" arguments
+!      to prevent a crash on Cheyenne. Do not change it back without testing if the code runs
+!      on Cheyenne with the GNU compiler.
     
     REAL, INTENT(in) :: delt
-    REAL, DIMENSION(IMS:IME), INTENT(in) :: dx
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(in) :: dz,      &
+    REAL, DIMENSION(:), INTENT(in) :: dx
+    REAL, DIMENSION(:,:), INTENT(in) :: dz,      &
          &u,v,w,th,sqv3D,p,exner,rho,T3D
-    REAL, DIMENSION(IMS:IME,KMS:KME), OPTIONAL, INTENT(in):: &
+    REAL, DIMENSION(:,:), INTENT(in):: &
          &sqc3D,sqi3D,qni,qnc,qnwfa,qnifa
-    REAL, DIMENSION(IMS:IME,KMS:KME), OPTIONAL, INTENT(in):: ozone
-    REAL, DIMENSION(IMS:IME), INTENT(in) :: xland,ust,       &
+    REAL, DIMENSION(:,:), INTENT(in):: ozone
+    REAL, DIMENSION(:), INTENT(in) :: xland,ust,       &
          &ch,ts,qsfc,ps,hfx,qfx,wspd,uoce,voce,vdfg,znt
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(inout) ::       &
+    REAL, DIMENSION(:,:), INTENT(inout) ::       &
          &Qke,Tsq,Qsq,Cov,qke_adv
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(inout) ::       &
+    REAL, DIMENSION(:,:), INTENT(inout) ::       &
          &RUBLTEN,RVBLTEN,RTHBLTEN,RQVBLTEN,RQCBLTEN,        &
          &RQIBLTEN,RQNIBLTEN,RQNCBLTEN,                      &
          &RQNWFABLTEN,RQNIFABLTEN
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(inout) :: DOZONE
+    REAL, DIMENSION(:,:), INTENT(inout) :: DOZONE
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(in)    :: RTHRATEN
+    REAL, DIMENSION(:,:), INTENT(in)    :: RTHRATEN
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(out)   ::       &
+    REAL, DIMENSION(:,:), INTENT(out)   ::       &
          &exch_h,exch_m
 
    !These 10 arrays are only allocated when bl_mynn_output > 0
-   REAL, DIMENSION(IMS:IME,KMS:KME), OPTIONAL, INTENT(inout) :: &
+   REAL, DIMENSION(:,:), INTENT(inout) :: &
          & edmf_a,edmf_w,edmf_qt,edmf_thl,edmf_ent,edmf_qc,  &
          & sub_thl3D,sub_sqv3D,det_thl3D,det_sqv3D
 
 !   REAL, DIMENSION(IMS:IME,KMS:KME)   :: &
 !         & edmf_a_dd,edmf_w_dd,edmf_qt_dd,edmf_thl_dd,edmf_ent_dd,edmf_qc_dd
 
-    REAL, DIMENSION(IMS:IME), INTENT(inout) :: Pblh,rmol
+    REAL, DIMENSION(:), INTENT(inout) :: Pblh,rmol
 
     REAL, DIMENSION(IMS:IME) :: Psig_bl,Psig_shcu
 
-    INTEGER,DIMENSION(IMS:IME),INTENT(INOUT) ::             &
+    INTEGER,DIMENSION(:),INTENT(INOUT) ::             &
          &KPBL,nupdraft,ktop_plume
 
-    REAL, DIMENSION(IMS:IME), INTENT(OUT) ::                &
+    REAL, DIMENSION(:), INTENT(OUT) ::                &
          &maxmf
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(inout) ::      &
+    REAL, DIMENSION(:,:), INTENT(inout) ::      &
          &el_pbl
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), optional, INTENT(out) ::          &
+    REAL, DIMENSION(:,:), INTENT(out) ::          &
          &qWT,qSHEAR,qBUOY,qDISS,dqke
     ! 3D budget arrays are not allocated when bl_mynn_tkebudget == .false.
     ! 1D (local) budget arrays are used for passing between subroutines.
     REAL, DIMENSION(kts:kte) :: qWT1,qSHEAR1,qBUOY1,qDISS1,dqke1,diss_heat
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), intent(out) :: Sh3D,Sm3D
+    REAL, DIMENSION(:,:), intent(out) :: Sh3D,Sm3D
 
-    REAL, DIMENSION(IMS:IME,KMS:KME), INTENT(inout) ::      &
+    REAL, DIMENSION(:,:), INTENT(inout) ::      &
          &qc_bl,qi_bl,cldfra_bl
     REAL, DIMENSION(KTS:KTE) :: qc_bl1D,qi_bl1D,cldfra_bl1D,&
                          qc_bl1D_old,qi_bl1D_old,cldfra_bl1D_old
@@ -605,9 +542,9 @@ CONTAINS
     INTEGER, INTENT(IN   ) ::   nchem, kdvel, ndvel
 !    REAL,    DIMENSION( ims:ime, kms:kme, nchem ), INTENT(INOUT), optional :: chem3d
 !    REAL,    DIMENSION( ims:ime, kdvel, ndvel ), INTENT(IN), optional :: vdep
-    REAL,    DIMENSION(ims:ime, kms:kme, nchem), INTENT(INOUT), optional :: chem3d
-    REAL,    DIMENSION(ims:ime, ndvel),   INTENT(IN),    optional :: vdep
-    REAL,    DIMENSION(ims:ime),     INTENT(IN),    optional :: frp,EMIS_ANT_NO
+    REAL,    DIMENSION(:, :, :), INTENT(INOUT) :: chem3d
+    REAL,    DIMENSION(:, :),   INTENT(IN) :: vdep
+    REAL,    DIMENSION(:),     INTENT(IN) :: frp,EMIS_ANT_NO
     !local
     REAL,    DIMENSION(kts:kte  ,nchem) :: chem1
     REAL,    DIMENSION(kts:kte+1,nchem) :: s_awchem1
@@ -654,7 +591,7 @@ CONTAINS
 
     ! Stochastic fields 
     INTEGER,  INTENT(IN)                                     ::spp_pbl
-    REAL, DIMENSION( ims:ime, kms:kme), INTENT(IN),OPTIONAL  ::pattern_spp_pbl
+    REAL, DIMENSION( :, :), INTENT(IN)                       ::pattern_spp_pbl
     REAL, DIMENSION(KTS:KTE)                                 ::rstoch_col
 
     ! Substepping TKE
@@ -804,7 +741,7 @@ CONTAINS
                    QC_BL1D(k)=QC_BL(i,k)
                    QI_BL1D(k)=QI_BL(i,k)
                 ENDIF
-                IF (PRESENT(sqi3D) .AND. FLAG_QI ) THEN
+                IF (FLAG_QI ) THEN
                    sqi(k)=sqi3D(i,k) !/(1.+qv(i,k))
                    sqw(k)=sqv(k)+sqc(k)+sqi(k)
                    thl(k)=th1(k) - xlvcp/ex1(k)*sqc(k) &
@@ -988,7 +925,7 @@ CONTAINS
              dqnwfa1(k)=0.0
              dqnifa1(k)=0.0
              dozone1(k)=0.0
-             IF(PRESENT(sqi3D) .AND. FLAG_QI)THEN
+             IF(FLAG_QI)THEN
                 sqi(k)= sqi3D(i,k) !/(1.+qv(i,k))
                 qi1(k)= sqi(k)/(1.-sqv(k))
                 sqw(k)= sqv(k)+sqc(k)+sqi(k)
@@ -1031,27 +968,27 @@ CONTAINS
             thetav(k)=th1(k)*(1.+0.608*sqv(k))
             thvl(k)  =thlsg(k) *(1.+0.608*sqv(k))
 
-             IF (PRESENT(qni) .AND. FLAG_QNI ) THEN
+             IF (FLAG_QNI ) THEN
                 qni1(k)=qni(i,k)
              ELSE
                 qni1(k)=0.0
              ENDIF
-             IF (PRESENT(qnc) .AND. FLAG_QNC ) THEN
+             IF (FLAG_QNC ) THEN
                 qnc1(k)=qnc(i,k)
              ELSE
                 qnc1(k)=0.0
              ENDIF
-             IF (PRESENT(qnwfa) .AND. FLAG_QNWFA ) THEN
+             IF (FLAG_QNWFA ) THEN
                 qnwfa1(k)=qnwfa(i,k)
              ELSE
                 qnwfa1(k)=0.0
              ENDIF
-             IF (PRESENT(qnifa) .AND. FLAG_QNIFA ) THEN
+             IF (FLAG_QNIFA ) THEN
                 qnifa1(k)=qnifa(i,k)
              ELSE
                 qnifa1(k)=0.0
              ENDIF
-             IF (PRESENT(ozone)) THEN
+             IF (FLAG_OZONE) THEN
                 ozone1(k)=ozone(i,k)
              ELSE
                 ozone1(k)=0.0
@@ -1115,7 +1052,7 @@ CONTAINS
           ENDDO ! end k
 
           !initialize smoke/chem arrays (if used):
-             IF  (mix_chem ) then
+             IF  ( rrfs_smoke .and. mix_chem ) then
                 do ic = 1,ndvel
                    vd1(ic) = vdep(i,ic) !is this correct????
                    chem1(kts,ic) = chem3d(i,kts,ic)
@@ -1412,7 +1349,7 @@ CONTAINS
                &bl_mynn_mixscalars               )
 
 
-          IF ( mix_chem ) THEN
+          IF ( rrfs_smoke .and. mix_chem ) THEN
              CALL mynn_mix_chem(kts,kte,i,       &
                   &delt, dz1, pblh(i),           &
                   &nchem, kdvel, ndvel,          &
@@ -1425,13 +1362,11 @@ CONTAINS
                   &frp(i),                       &
                   &fire_turb                     )
 
-             IF ( PRESENT(chem3d) ) THEN
-                DO ic = 1,nchem
-                   DO k = kts,kte
-                      chem3d(i,k,ic) = chem1(k,ic)
-                   ENDDO
+             DO ic = 1,nchem
+                DO k = kts,kte
+                   chem3d(i,k,ic) = chem1(k,ic)
                 ENDDO
-             ENDIF
+             ENDDO
           ENDIF
  
           CALL retrieve_exchange_coeffs(kts,kte,&
@@ -1446,22 +1381,22 @@ CONTAINS
              RTHBLTEN(i,k)=dth1(k)
              RQVBLTEN(i,k)=dqv1(k)
              IF(bl_mynn_cloudmix > 0)THEN
-               IF (PRESENT(sqc3D) .AND. FLAG_QC) RQCBLTEN(i,k)=dqc1(k)
-               IF (PRESENT(sqi3D) .AND. FLAG_QI) RQIBLTEN(i,k)=dqi1(k)
+               IF (FLAG_QC) RQCBLTEN(i,k)=dqc1(k)
+               IF (FLAG_QI) RQIBLTEN(i,k)=dqi1(k)
              ELSE
-               IF (PRESENT(sqc3D) .AND. FLAG_QC) RQCBLTEN(i,k)=0.
-               IF (PRESENT(sqi3D) .AND. FLAG_QI) RQIBLTEN(i,k)=0.
+               IF (FLAG_QC) RQCBLTEN(i,k)=0.
+               IF (FLAG_QI) RQIBLTEN(i,k)=0.
              ENDIF
              IF(bl_mynn_cloudmix > 0 .AND. bl_mynn_mixscalars > 0)THEN
-               IF (PRESENT(qnc) .AND. FLAG_QNC) RQNCBLTEN(i,k)=dqnc1(k)
-               IF (PRESENT(qni) .AND. FLAG_QNI) RQNIBLTEN(i,k)=dqni1(k)
-               IF (PRESENT(qnwfa) .AND. FLAG_QNWFA) RQNWFABLTEN(i,k)=dqnwfa1(k)
-               IF (PRESENT(qnifa) .AND. FLAG_QNIFA) RQNIFABLTEN(i,k)=dqnifa1(k)
+               IF (FLAG_QNC) RQNCBLTEN(i,k)=dqnc1(k)
+               IF (FLAG_QNI) RQNIBLTEN(i,k)=dqni1(k)
+               IF (FLAG_QNWFA) RQNWFABLTEN(i,k)=dqnwfa1(k)
+               IF (FLAG_QNIFA) RQNIFABLTEN(i,k)=dqnifa1(k)
              ELSE
-               IF (PRESENT(qnc) .AND. FLAG_QNC) RQNCBLTEN(i,k)=0.
-               IF (PRESENT(qni) .AND. FLAG_QNI) RQNIBLTEN(i,k)=0.
-               IF (PRESENT(qnwfa) .AND. FLAG_QNWFA) RQNWFABLTEN(i,k)=0.
-               IF (PRESENT(qnifa) .AND. FLAG_QNIFA) RQNIFABLTEN(i,k)=0.
+               IF (FLAG_QNC) RQNCBLTEN(i,k)=0.
+               IF (FLAG_QNI) RQNIBLTEN(i,k)=0.
+               IF (FLAG_QNWFA) RQNWFABLTEN(i,k)=0.
+               IF (FLAG_QNIFA) RQNIFABLTEN(i,k)=0.
              ENDIF
              DOZONE(i,k)=DOZONE1(k)
 

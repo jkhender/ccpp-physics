@@ -4,7 +4,6 @@
 
  module rrfs_smoke_wrapper
 
-   use physcons,        only : g => con_g, pi => con_pi
    use machine ,        only : kind_phys
    use rrfs_smoke_config
    use dust_data_mod
@@ -20,24 +19,10 @@
 
    private
 
-   public :: rrfs_smoke_wrapper_init, rrfs_smoke_wrapper_run, rrfs_smoke_wrapper_finalize
+   public :: rrfs_smoke_wrapper_run
 
 contains
 
-!> \brief Brief description of the subroutine
-!!
-      subroutine rrfs_smoke_wrapper_init()
-      end subroutine rrfs_smoke_wrapper_init
-
-!> \brief Brief description of the subroutine
-!!
-!! \section arg_table_rrfs_smoke_wrapper_finalize Argument Table
-!!
-      subroutine rrfs_smoke_wrapper_finalize()
-      end subroutine rrfs_smoke_wrapper_finalize
-
-!> \defgroup gsd_chem_group GSD Chem emission driver Module
-!! This is the gsd chemistry
 !>\defgroup rrfs_smoke_wrapper GSD Chem emission driver Module  
 !> \ingroup gsd_chem_group
 !! This is the GSD Chem emission driver Module
@@ -50,8 +35,8 @@ contains
                    u10m, v10m, ustar, rlat, rlon, tskin, pb2d, t2m, dpt2m,             &
                    pr3d, ph3d,phl3d, prl3d, tk3d, us3d, vs3d, spechum, w,              &
                    nsoil, smc, vegtype, soiltyp, sigmaf, dswsfc, zorl,snow,            &
-                   julian, idat, rain_cpl, rainc_cpl, exch, hf2d,                      &
-                   dust12m_in, emi_in, smoke_GBBEPx, ntrac, qgrs, gq0, chem3d, tile_num,       &
+                   julian, idat, rain_cpl, rainc_cpl, exch, hf2d, g, pi, con_cp, con_rd,   &
+                   dust12m_in, emi_in, smoke_GBBEPx, ntrac, qgrs, gq0, chem3d, tile_num,   &
                    ntsmoke, ntdust, imp_physics, imp_physics_thompson,                 &
                    nwfa, nifa, emanoc,                                                 &
                    emdust, emseas, ebb_smoke_hr, frp_hr, frp_std_hr,                   &
@@ -66,34 +51,34 @@ contains
 
     integer,        intent(in) :: im,kte,kme,ktau,nsoil,tile_num,jdate(8),idat(8)
     integer,        intent(in) :: ntrac, ntsmoke, ntdust
-    real(kind_phys),intent(in) :: dt, julian
+    real(kind_phys),intent(in) :: dt, julian, g, pi, con_cp, con_rd
     logical,        intent(in) :: smoke_forecast_in,aero_ind_fdb_in,dbg_opt_in
 
     integer, parameter :: ids=1,jds=1,jde=1, kds=1
     integer, parameter :: ims=1,jms=1,jme=1, kms=1
     integer, parameter :: its=1,jts=1,jte=1, kts=1
 
-    integer, dimension(im), intent(in) :: land, vegtype, soiltyp        
-    real(kind_phys), dimension(im,nsoil), intent(in) :: smc
-    real(kind_phys), dimension(im,12, 5), intent(in) :: dust12m_in
-    real(kind_phys), dimension(im,24, 3), intent(in) :: smoke_GBBEPx
-    real(kind_phys), dimension(im,    1), intent(in) :: emi_in
-    real(kind_phys), dimension(im), intent(in) :: u10m, v10m, ustar, dswsfc,      &
+    integer, dimension(:), intent(in) :: land, vegtype, soiltyp
+    real(kind_phys), dimension(:,:), intent(in) :: smc
+    real(kind_phys), dimension(:,:,:), intent(in) :: dust12m_in
+    real(kind_phys), dimension(:,:,:), intent(in) :: smoke_GBBEPx
+    real(kind_phys), dimension(:,:), intent(in) :: emi_in
+    real(kind_phys), dimension(:), intent(in) :: u10m, v10m, ustar, dswsfc,      &
                 garea, rlat,rlon, tskin, pb2d, sigmaf, zorl, snow,                &
                 rain_cpl, rainc_cpl, hf2d, t2m, dpt2m
-    real(kind_phys), dimension(im,kme), intent(in) :: ph3d, pr3d
-    real(kind_phys), dimension(im,kte), intent(in) :: phl3d, prl3d, tk3d,         &
+    real(kind_phys), dimension(:,:), intent(in) :: ph3d, pr3d
+    real(kind_phys), dimension(:,:), intent(in) :: phl3d, prl3d, tk3d,         &
                 us3d, vs3d, spechum, exch, w
-    real(kind_phys), dimension(im,kte,ntrac), intent(inout) :: qgrs, gq0
-    real(kind_phys), dimension(im,kte,    2), intent(inout) :: chem3d
-    real(kind_phys), dimension(im), intent(inout) :: emdust, emseas, emanoc
-    real(kind_phys), dimension(im), intent(inout) :: ebb_smoke_hr, frp_hr, frp_std_hr
-    real(kind_phys), dimension(im    ), intent(inout) :: coef_bb, fhist
-    real(kind_phys), dimension(im,kte), intent(inout) :: ebu_smoke
-    real(kind_phys), dimension(im), intent(inout) :: max_fplume, min_fplume       
-    real(kind_phys), dimension(im), intent(  out) :: hwp
-    real(kind_phys), dimension(im,kte), intent(out) :: smoke_ext, dust_ext
-    real(kind_phys), dimension(im,kte), intent(inout) :: nwfa, nifa
+    real(kind_phys), dimension(:,:,:), intent(inout) :: qgrs, gq0
+    real(kind_phys), dimension(:,:,:), intent(inout) :: chem3d
+    real(kind_phys), dimension(:), intent(inout) :: emdust, emseas, emanoc
+    real(kind_phys), dimension(:), intent(inout) :: ebb_smoke_hr, frp_hr, frp_std_hr
+    real(kind_phys), dimension(:), intent(inout) :: coef_bb, fhist
+    real(kind_phys), dimension(:,:), intent(inout) :: ebu_smoke
+    real(kind_phys), dimension(:), intent(inout) :: max_fplume, min_fplume       
+    real(kind_phys), dimension(:), intent(  out) :: hwp
+    real(kind_phys), dimension(:,:), intent(out) :: smoke_ext, dust_ext
+    real(kind_phys), dimension(:,:), intent(inout) :: nwfa, nifa
     integer, intent(in   ) :: imp_physics, imp_physics_thompson
     integer,        intent(in) :: seas_opt_in, dust_opt_in, biomass_burn_opt_in,  &
                                   drydep_opt_in, plumerisefire_frq_in, addsmoke_flag_in
@@ -152,8 +137,7 @@ contains
     real(kind_phys), parameter :: mean_diameter2= 1.E-6, sigma2=1.8
     real(kind_phys), parameter :: kappa_oc      = 0.2
     real(kind_phys), parameter :: kappa_dust    = 0.04
-    real(kind_phys), parameter :: fact_wfa = 1.e-9*6.0/pi*exp(4.5*log(sigma1)**2)/mean_diameter1**3
-    real(kind_phys), parameter :: fact_ifa = 1.e-9*6.0/pi*exp(4.5*log(sigma2)**2)/mean_diameter2**3
+    real(kind_phys) :: fact_wfa, fact_ifa
 !> -- aerosol density (kg/m3)
     real(kind_phys), parameter :: density_dust= 2.6e+3, density_sulfate=1.8e+3
     real(kind_phys), parameter :: density_oc  = 1.4e+3, density_seasalt=2.2e+3
@@ -257,7 +241,7 @@ contains
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,exch,w,            &
         nsoil,smc,vegtype,soiltyp,sigmaf,dswsfc,zorl,                   &
         snow,dust12m_in,emi_in,smoke_GBBEPx,                            &
-        hf2d, pb2d,                                                     &
+        hf2d, pb2d, g, pi,                                              &
         u10,v10,ust,tsk,xland,xlat,xlong,dxy,                           &
         rri,t_phy,u_phy,v_phy,p_phy,rho_phy,dz8w,p8w,                   &
         t8w,exch_h,                                                     &
@@ -319,7 +303,7 @@ contains
     if (seas_opt >= SEAS_OPT_DEFAULT) then
     call gocart_seasalt_driver(ktau,dt,rri,t_phy,moist,                 &
         u_phy,v_phy,chem,rho_phy,dz8w,u10,v10,ust,p8w,tsk,              &
-        xland,xlat,xlong,dxy,g,emis_seas,                               &
+        xland,xlat,xlong,dxy,g,emis_seas,pi,                            &
         seashelp,num_emis_seas,num_moist,num_chem,seas_opt,             &
         ids,ide, jds,jde, kds,kde,                                      &
         ims,ime, jms,jme, kms,kme,                                      &
@@ -351,11 +335,12 @@ contains
                    data,flam_frac,ebu_in,ebu,                          &
                    t_phy,moist(:,:,:,p_qv),                            &
                    rho_phy,vvel,u_phy,v_phy,p_phy,                     &
-                   z_at_w,zmid,ktau,                                   &
+                   z_at_w,zmid,ktau,g,con_cp,con_rd,                   &
                    plume_frp, min_fplume2, max_fplume2,                &   ! new approach
                    ids,ide, jds,jde, kds,kde,                          &
                    ims,ime, jms,jme, kms,kme,                          &
-                   its,ite, jts,jte, kts,kte                           )
+                   its,ite, jts,jte, kts,kte, errmsg, errflg           )
+        if(errflg/=0) return
     end if
 
     ! -- add biomass burning emissions at every timestep
@@ -445,6 +430,8 @@ contains
 !    WRITE(*,*) 'rrfs nwfa/nifa 2 at ktau= ',ktau
 !-- to provide real aerosol emission for Thompson MP
     if (imp_physics == imp_physics_thompson .and. aero_ind_fdb) then
+      fact_wfa = 1.e-9*6.0/pi*exp(4.5*log(sigma1)**2)/mean_diameter1**3
+      fact_ifa = 1.e-9*6.0/pi*exp(4.5*log(sigma2)**2)/mean_diameter2**3
 
       do i = its, ite
        do k = kts, kte
@@ -476,7 +463,7 @@ contains
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,exch,w,            &
         nsoil,smc,vegtype,soiltyp,sigmaf,dswsfc,zorl,                   &
         snow_cpl,dust12m_in,emi_in,smoke_GBBEPx,                        &
-        hf2d, pb2d,                                                     &
+        hf2d, pb2d, g, pi,                                              &
         u10,v10,ust,tsk,xland,xlat,xlong,dxy,                           &
         rri,t_phy,u_phy,v_phy,p_phy,rho_phy,dz8w,p8w,                   &
         t8w,exch_h,                                                     &
@@ -501,6 +488,7 @@ contains
     integer, intent(in) :: nsoil
     integer, dimension(ims:ime), intent(in) :: land, vegtype, soiltyp
     integer, intent(in) :: ntrac
+    real(kind=kind_phys), intent(in) :: g, pi
     real(kind=kind_phys), dimension(ims:ime), intent(in) ::                & 
          u10m, v10m, ustar, garea, rlat, rlon, ts2d, sigmaf, dswsfc,       &
          zorl, snow_cpl, pb2d, hf2d

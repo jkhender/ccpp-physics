@@ -1,3 +1,6 @@
+!>\file  module_smoke_plumerise.F90
+!! This file contains the fire plume rise module.
+
 !-------------------------------------------------------------------------
 !- 12 April 2016
 !- Implementing the fire radiative power (FRP) methodology for biomass burning
@@ -13,16 +16,13 @@ module module_smoke_plumerise
   use machine , only : kind_phys
   use rrfs_smoke_data
   use rrfs_smoke_config, only : FIRE_OPT_GBBEPx, FIRE_OPT_MODIS
-  use physcons,        only : g => con_g, cp => con_cp, r_d => con_rd, r_v =>con_rv
   use plume_data_mod,  only : num_frp_plume, p_frp_hr, p_frp_std,                  &
                               !tropical_forest, boreal_forest, savannah, grassland,   &
                               wind_eff
   USE module_zero_plumegen_coms
 
-  real(kind=kind_phys),parameter :: p1000mb = 100000.  ! p at 1000mb (pascals)
-  real(kind=kind_phys),parameter :: rgas=r_d
-  real(kind=kind_phys),parameter :: cpor=cp/r_d
-  real(kind=kind_phys),parameter :: p00=p1000mb
+  !real(kind=kind_phys),parameter :: rgas=r_d
+  !real(kind=kind_phys),parameter :: cpor=cp/r_d
 CONTAINS
 
 ! RAR:
@@ -30,7 +30,8 @@ CONTAINS
 !                         firesize,mean_fct,                         &
                         ! nspecies,eburn_in,eburn_out,               &
                          up,vp,wp,theta,pp,dn0,rv,zt_rams,zm_rams,  &
-                         frp_inst,k1,k2, ktau, dbg_opt   )
+                         frp_inst,k1,k2, ktau, dbg_opt, g, cp, rgas, &
+                         cpor,  errmsg, errflg   )
 
   implicit none
   type(smoke_data), intent(inout) :: data
@@ -41,11 +42,14 @@ CONTAINS
 
 !  integer, intent(in) :: PLUMERISE_flag
   real(kind=kind_phys) :: frp_inst   ! This is the instantenous FRP, at a given time step
+  real(kind=kind_phys) :: g, cp, rgas, cpor
 
   integer :: ng,m1,m2,m3,ia,iz,ja,jz,ibcon,mynum,i,j,k,imm,ixx,ispc !,nspecies
 
   INTEGER, INTENT (IN)  :: ktau
   INTEGER, INTENT (OUT) :: k1,k2
+  character(*), intent(inout) :: errmsg
+  integer, intent(inout) :: errflg
 
 !  integer :: ncall = 0
   integer :: kmt
@@ -141,7 +145,8 @@ END IF
 !  enddo
 
          !- get envinronmental state (temp, water vapor mix ratio, ...)
-         call get_env_condition(coms,1,m1,kmt,wind_eff,ktau)
+         call get_env_condition(coms,1,m1,kmt,wind_eff,ktau,g,cp,rgas,cpor,errmsg,errflg)
+         if(errflg/=0) return
 
          !- loop over the four types of aggregate biomes with fires for plumerise version 1
          !- for plumerise version 2, there is exist only one loop
@@ -174,7 +179,8 @@ END IF
          END IF
     
        !- get fire properties (burned area, plume radius, heating rates ...)
-       call get_fire_properties(coms,imm,iveg_ag,burnt_area,FRP)
+       call get_fire_properties(coms,imm,iveg_ag,burnt_area,FRP,errmsg,errflg)
+       if(errflg/=0) return
 
        !------  generates the plume rise    ------
        call makeplume (coms,kmt,ztopmax(imm),ixx,imm)
@@ -214,16 +220,21 @@ END IF
 end subroutine plumerise
 !-------------------------------------------------------------------------
 
-subroutine get_env_condition(coms,k1,k2,kmt,wind_eff,ktau)
+subroutine get_env_condition(coms,k1,k2,kmt,wind_eff,ktau,g,cp,rgas,cpor,errmsg,errflg)
 
 !se module_zero_plumegen_coms
 !use rconstants
 implicit none
 type(plumegen_coms), pointer :: coms
+real(kind=kind_phys) :: g,cp,rgas,cpor
 integer :: k1,k2,k,kcon,klcl,kmt,nk,nkmid,i
+real(kind=kind_phys),parameter :: p1000mb = 100000.  ! p at 1000mb (pascals)
+real(kind=kind_phys),parameter :: p00=p1000mb
 real(kind=kind_phys) :: znz,themax,tlll,plll,rlll,zlll,dzdd,dzlll,tlcl,plcl,dzlcl,dummy
 !integer :: n_setgrid = 0 
 integer :: wind_eff,ktau
+character(*), intent(inout) :: errmsg
+integer, intent(inout) :: errflg
 
 if(ktau==2) then
  ! n_setgrid = 1
@@ -233,20 +244,31 @@ if(ktau==2) then
 endif
 
 znz=coms%zcon(k2)
+errflg=1
 do k=nkp,1,-1
-  if(coms%zt(k).lt.znz)go to 13
+  if(coms%zt(k).lt.znz) then
+    errflg=0
+    exit
+  endif
 enddo
-stop ' envir stop 12'
-13 continue
+if(errflg/=0) then
+  errmsg=' envir stop 12'
+  return
+endif
 !-srf-mb
 kmt=min(k,nkp-1)
 
 nk=k2-k1+1
-!call htint(nk, coms%wcon,coms%zzcon,kmt,wpe,coms%zt)
- call htint(nk,  coms%ucon,coms%zcon,kmt,coms%upe,coms%zt)
- call htint(nk,  coms%vcon,coms%zcon,kmt,coms%vpe,coms%zt)
- call htint(nk,coms%thtcon,coms%zcon,kmt,coms%the  ,coms%zt)
- call htint(nk, coms%rvcon,coms%zcon,kmt,coms%qvenv,coms%zt)
+!call htint(nk, coms%wcon,coms%zzcon,kmt,wpe,coms%zt,errmsg,errflg)
+!if(errflg/=0) return
+ call htint(nk,  coms%ucon,coms%zcon,kmt,coms%upe,coms%zt,errmsg,errflg)
+ if(errflg/=0) return
+ call htint(nk,  coms%vcon,coms%zcon,kmt,coms%vpe,coms%zt,errmsg,errflg)
+ if(errflg/=0) return
+ call htint(nk,coms%thtcon,coms%zcon,kmt,coms%the  ,coms%zt,errmsg,errflg)
+ if(errflg/=0) return
+ call htint(nk, coms%rvcon,coms%zcon,kmt,coms%qvenv,coms%zt,errmsg,errflg)
+ if(errflg/=0) return
 do k=1,kmt
   coms%qvenv(k)=max(coms%qvenv(k),1e-8)
 enddo
@@ -419,13 +441,15 @@ end subroutine set_grid
   END SUBROUTINE set_flam_vert
 !-------------------------------------------------------------------------
 
-subroutine get_fire_properties(coms,imm,iveg_ag,burnt_area,FRP)
+subroutine get_fire_properties(coms,imm,iveg_ag,burnt_area,FRP,errmsg,errflg)
 !use module_zero_plumegen_coms
 implicit none
 type(plumegen_coms), pointer :: coms
 integer ::  moist,  i,  icount,imm,iveg_ag  !,plumerise_flag
 real(kind=kind_phys)::   bfract,  effload,  heat,  hinc ,burnt_area,heat_fluxW,FRP
 real(kind=kind_phys),    dimension(2,4) :: heat_flux
+integer, intent(inout) :: errflg
+character(*), intent(inout) :: errmsg
 INTEGER, parameter :: use_last = 0
 !real(kind=kind_phys), parameter :: beta = 5.0   !ref.: Wooster et al., 2005
 REAL(kind=kind_phys), parameter :: beta = 0.88  !ref.: Paugam et al., 2015
@@ -519,7 +543,11 @@ COMS%FMOIST   = MOIST / 100.       !- fuel moisture fraction
 !     except for the first few minutes for stability
   ICOUNT = 1  
 !
-  if(COMS%MDUR > NTIME) STOP 'Increase time duration (ntime) in min - see file "module_zero_plumegen_coms.F90"'
+  if(COMS%MDUR > NTIME) then
+    errmsg = 'Increase time duration (ntime) in min - see file "module_zero_plumegen_coms.F90"'
+    errflg = 1
+    return
+  endif
 
   DO WHILE (ICOUNT.LE.COMS%MDUR)                             
 !  COMS%HEATING (ICOUNT) = HEAT * EFFLOAD / COMS%TDUR  ! W/m**2 
@@ -1930,7 +1958,7 @@ ELSE                                !SD is positive, need some water
 !  sd is still positive or we wouldn't be here.
 
 
-   IF (COMS%QH (COMS%L) .LE.1.E-10) GOTO 33                                  
+   IF (COMS%QH (COMS%L) > 1.E-10) THEN
 
 !srf-25082005
 !  QUANT = ( COMS%QC (COMS%L)  + COMS%QV (COMS%L) - COMS%QSAT (COMS%L) ) * COMS%RHO (COMS%L)   !g/m**3
@@ -1979,7 +2007,7 @@ ELSE                                !SD is positive, need some water
 !  now for ice
 !  equation from (OT); correction factors for units applied
 !
-   33    continue
+   ENDIF
    IF (COMS%QI (COMS%L) .LE.1.E-10) RETURN            !no ice there
 !
    DIVIDEND = ( (1.E6 / COMS%RHO (COMS%L) ) **0.475) * (SD / COMS%QSAT (COMS%L) &
@@ -2270,7 +2298,7 @@ RETURN
 !
 END SUBROUTINE MELT
 
-SUBROUTINE htint (nzz1, vctra, eleva, nzz2, vctrb, elevb)
+SUBROUTINE htint (nzz1, vctra, eleva, nzz2, vctrb, elevb, errmsg, errflg)
   IMPLICIT NONE
   INTEGER, INTENT(IN ) :: nzz1
   INTEGER, INTENT(IN ) :: nzz2
@@ -2278,7 +2306,8 @@ SUBROUTINE htint (nzz1, vctra, eleva, nzz2, vctrb, elevb)
   REAL(kind=kind_phys),    INTENT(OUT) :: vctrb(nzz2)
   REAL(kind=kind_phys),    INTENT(IN ) :: eleva(nzz1)
   REAL(kind=kind_phys),    INTENT(IN ) :: elevb(nzz2)
-
+  character(*), intent(inout) :: errmsg
+  integer, intent(inout) :: errflg
   INTEGER :: l
   INTEGER :: k
   INTEGER :: kk
@@ -2305,7 +2334,8 @@ SUBROUTINE htint (nzz1, vctra, eleva, nzz2, vctrb, elevb)
            DO kk=1,l
               PRINT*,'kk,eleva(kk),elevb(kk)',kk,eleva(kk),elevb(kk)
            END DO
-           STOP 'htint'
+           errmsg='htint assertion failure (see print for details)'
+           errflg=1
         END IF
      END DO
   END DO
@@ -2328,13 +2358,14 @@ real(kind=kind_phys) temc , tem,esatm
 !
 !
 TEMC = TEM - TMELT  
-IF (TEMC.GT. - 40.0) GOTO 230  
-ESATM = CI1 * EXP (CI2 * TEMC / (TEMC + CI3) )  !ice, millibars  
-ESAT_PR = ESATM / 10.	!kPa			  
+IF (TEMC<= - 40.0) then
+  ESATM = CI1 * EXP (CI2 * TEMC / (TEMC + CI3) )  !ice, millibars  
+  ESAT_PR = ESATM / 10.	!kPa			  
 
-RETURN  
+  RETURN  
+ENDIF
 !
-230 ESATM = CW1 * EXP ( ( (CW2 - (TEMC / CW4) ) * TEMC) / (TEMC + CW3))
+ESATM = CW1 * EXP ( ( (CW2 - (TEMC / CW4) ) * TEMC) / (TEMC + CW3))
                           
 ESAT_PR = ESATM / 10.	!kPa			  
 RETURN  

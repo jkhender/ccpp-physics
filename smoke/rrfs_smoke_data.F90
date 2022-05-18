@@ -1,3 +1,6 @@
+!>\file  rrfs_smoke_data.F90
+!! This file contains data for the RRFS-Smoke modules.
+
 module rrfs_smoke_data
   use machine ,        only : kind_phys
   implicit none
@@ -144,13 +147,15 @@ contains
 
 !      SUBROUTINE dep_init( id, numgas, mminlu_loc, &
 !                           ips, ipe, jps, jpe, ide, jde )
-      SUBROUTINE dep_init(this)
+      SUBROUTINE dep_init(this,errmsg,errflg)
         ! Lifted out of dep_simple_mod, this initializes
         ! member variables that were module variables in
         ! that module.
 !--
         implicit none
         class(smoke_data) :: this
+        character(*), intent(inout) :: errmsg
+        integer, intent(inout) :: errflg
 
 !--------------------------------------------------
 ! .. Scalar Arguments ..
@@ -217,12 +222,14 @@ contains
           0.19E+03, 0.10E+11, 0.10E+11, 0.10E+11/
 ! ..
         IF (nlu/=25) THEN
-          write(0,*) 'number of land use classifications not correct '
-          stop
+          errmsg='number of land use classifications not correct '
+          errflg=1
+          return
         END IF
         IF (dep_seasons/=5) THEN
-          write(0,*) 'number of dep_seasons not correct '
-          stop
+          errmsg='number of dep_seasons not correct '
+          errflg=1
+          return
         END IF
 
 !     SURFACE RESISTANCE DATA FOR DEPOSITION MODEL OF
