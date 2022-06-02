@@ -3934,7 +3934,8 @@ MODULE module_mp_thompson
                                             *odzq*DT*onstep(1))
           enddo
 
-          if (rr(kts).gt.R1*10.) &
+          !if (rr(kts).gt.R1*10.) &
+          if (rr(kts).gt.R1*1000.) &
           pptrain = pptrain + sed_r(kts)*DT*onstep(1)
         enddo
       else !if(.not. sedi_semi)
@@ -4025,7 +4026,8 @@ MODULE module_mp_thompson
                                            *odzq*DT*onstep(2))
          enddo
 
-         if (ri(kts).gt.R1*10.) &
+         !if (ri(kts).gt.R1*10.) &
+         if (ri(kts).gt.R1*1000.) &
          pptice = pptice + sed_i(kts)*DT*onstep(2)
       enddo
       endif
@@ -4052,7 +4054,9 @@ MODULE module_mp_thompson
                                            *odzq*DT*onstep(3))
          enddo
 
-         if (rs(kts).gt.R1*10.) &
+         !if (rs(kts).gt.R1*10.) &
+                 !-- 8apr22 communication with Greg
+         if (rs(kts).gt.R1*1000.) &
          pptsnow = pptsnow + sed_s(kts)*DT*onstep(3)
       enddo
       endif
@@ -4080,7 +4084,9 @@ MODULE module_mp_thompson
                                            *odzq*DT*onstep(4))
            enddo
 
-           if (rg(kts).gt.R1*10.) &
+           !if (rg(kts).gt.R1*10.) &
+           !-- 8apr22 - communication with Greg
+           if (rg(kts).gt.R1*1000.) &
            pptgraul = pptgraul + sed_g(kts)*DT*onstep(4)
         enddo
       else ! if(.not. sedi_semi) then 
