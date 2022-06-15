@@ -324,8 +324,8 @@ module lsm_ruc
      &     ( iter, me, master, delt, kdt, im, nlev, lsm_ruc, lsm,       &
      &       imp_physics, imp_physics_gfdl, imp_physics_thompson,       &
      &       imp_physics_nssl,                                          &
-     &       do_mynnsfclay, lsoil_ruc, lsoil, rdlai, xlat_d, xlon_d, zs,&
-     &       t1, q1, qc, stype, vtype, sigmaf, laixy,                   &
+     &       do_mynnsfclay, lsoil_ruc, lsoil, rdlai, xlat_d, xlon_d,    &
+     &       oro, sigma, zs, t1, q1, qc, stype, vtype, sigmaf, laixy,   &
      &       dlwflx, dswsfc, tg3, coszen, land, icy, use_lake,          &
      &       rainnc, rainc, ice, snow, graupel, prsl1, zf,              &
      &       wind, shdmin, shdmax,                                      &

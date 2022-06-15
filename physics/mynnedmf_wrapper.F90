@@ -183,11 +183,8 @@ SUBROUTINE mynnedmf_wrapper_run(        &
      logical, intent(in) :: cplflx
 
      !smoke/chem
-     !logical, intent(in) :: mix_chem, fire_turb
-     !integer, intent(in) :: nchem, ndvel, kdvel
-     !for testing only:
-     logical, parameter :: mix_chem=.false., fire_turb=.false.
-     integer, parameter :: nchem=2, ndvel=2, kdvel=1
+     integer, intent(in) :: nchem, ndvel
+     integer, parameter  :: kdvel=1
 
 ! NAMELIST OPTIONS (INPUT):
      logical, intent(in) ::                                 &
@@ -364,15 +361,6 @@ SUBROUTINE mynnedmf_wrapper_run(        &
       !initialize arrays for test
       EMIS_ANT_NO = 0.
       vdep = 0. ! hli for chem dry deposition, 0 temporarily
-      if (mix_chem) then
-         allocate ( chem3d(im,levs,nchem) )
-         do k=1,levs
-         do i=1,im
-            chem3d(i,k,1)=qgrs_smoke_conc(i,k)
-            chem3d(i,k,2)=qgrs_dust_conc (i,k)
-         enddo
-         enddo
-      endif
 
   ! Check incoming moist species to ensure non-negative values
   ! First, create height (dz) and pressure differences (delp) 
