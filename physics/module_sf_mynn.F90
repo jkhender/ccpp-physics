@@ -111,10 +111,6 @@ MODULE module_sf_mynn
   INTEGER, PARAMETER :: debug_code = 0  !0: no extra ouput
                                         !1: check input
                                         !2: everything - heavy I/O
-  LOGICAL, PARAMETER :: compute_diag = .false.
-  LOGICAL, PARAMETER :: compute_flux = .true.  !shouldn't need compute 
-               ! these in FV3. They will be written over anyway.
-               ! Computing the fluxes here is leftover from the WRF world.
 
   REAL,   DIMENSION(0:1000 ),SAVE :: psim_stab,psim_unstab, &
                                      psih_stab,psih_unstab
