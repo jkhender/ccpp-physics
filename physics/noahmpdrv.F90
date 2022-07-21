@@ -694,7 +694,7 @@ do i = 1, im
 
       soil_category       = soiltyp(i)
       slope_category      = slopetyp(i)
-      soil_color_category = 4
+      soil_color_category = 2
 
       call transfer_mp_parameters(vegetation_category, soil_category, &
                         slope_category, soil_color_category, crop_type,parameters)
