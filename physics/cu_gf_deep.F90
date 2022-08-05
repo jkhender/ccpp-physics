@@ -353,13 +353,13 @@ contains
      integer                              ::                             &
        iloop,nens3,ki,kk,i,k
      real(kind=kind_phys)                 ::                             &
-      dz,dzo,mbdt,radius,pefc,                                           &
+      dz,dzo,mbdt,radius,                                                &
       zcutdown,depth_min,zkbmax,z_detr,zktop,                            &
       dh,cap_maxs,trash,trash2,frh,sig_thresh
      real(kind=kind_phys) entdo,dp,subin,detdo,entup,                    &
       detup,subdown,entdoj,entupk,detupk,totmas
 
-     real(kind=kind_phys), dimension (its:ite) :: lambau,flux_tun,zws,ztexec,zqexec
+     real(kind=kind_phys), dimension (its:ite) :: lambau,flux_tun,zws,ztexec,zqexec,pefc
 !$acc declare create(lambau,flux_tun,zws,ztexec,zqexec)
 
      integer :: jprnt,jmini,start_k22
