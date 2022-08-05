@@ -55,7 +55,6 @@ contains
 !!\param    cupclw             incloud mixing ratio of cloudwater/ice (for radiation)
 !!                            this needs heavy tuning factors, since cloud fraction is
 !!                             not included (kg/kg)
-!!\param    cnvwt              required for gfs physics
 !!\param    itf,ktf,its,ite, kts,kte are dimensions
 !!\param    ipr               horizontal index of printed column
 !!\param    tropics            =0
@@ -65,7 +64,7 @@ contains
                          us,vs,zo,t,q,z1,tn,qo,po,psur,dhdt,kpbl,rho,     & ! input variables, must be supplied
                          hfx,qfx,xland,ichoice,tcrit,dtime,         &
                          zuo,xmb_out,kbcon,ktop,k22,ierr,ierrc,     &
-                         outt,outq,outqc,outu,outv,cnvwt,pre,cupclw,     & ! output tendencies
+                         outt,outq,outqc,outu,outv,pre,cupclw,      & ! output tendencies
                          itf,ktf,its,ite, kts,kte,ipr,tropics)  ! dimesnional variables
 !
 ! this module needs some subroutines from gf_deep
@@ -90,8 +89,8 @@ contains
   ! pre    = output precip
      real(kind=kind_phys),    dimension (its:ite,kts:kte)                              &
         ,intent (inout  )                 ::                           &
-        cnvwt,outt,outq,outqc,cupclw,zuo,outu,outv
-!$acc declare copy(cnvwt,outt,outq,outqc,cupclw,zuo,outu,outv)
+        outt,outq,outqc,cupclw,zuo,outu,outv
+!$acc declare copy(outt,outq,outqc,cupclw,zuo,outu,outv)
      real(kind=kind_phys),    dimension (its:ite)                                      &
         ,intent (out  )                   ::                           &
         xmb_out
@@ -665,7 +664,6 @@ contains
 !$acc loop independent
          do k=k22(i)+1,ktop(i)
           dp=100.*(po_cup(i,k)-po_cup(i,k+1))
-          cnvwt(i,k)=zuo(i,k)*cupclw(i,k)*g/dp
 !$acc atomic
           trash2=trash2+entr_rate_2d(i,k)
 !$acc atomic
