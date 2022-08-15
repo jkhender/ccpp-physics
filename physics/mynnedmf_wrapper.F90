@@ -83,12 +83,6 @@
             return
          end if
 
-        if (lheatstrg) then
-          errmsg = 'Logic error: lheatstrg not implemented for MYNN PBL'
-          errflg = 1
-          return
-        end if
-
       end subroutine mynnedmf_wrapper_init
 
       subroutine mynnedmf_wrapper_finalize ()
@@ -168,7 +162,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
 ! should be moved to inside the mynn:
      use machine,        only: kind_phys
      use bl_mynn_common, only: cp, r_d, grav, g_inv, zero, &
-         xlv, xlvcp, xlscp
+         xlv, xlvcp, xlscp, p608
      use module_bl_mynn, only: mynn_bl_driver
 
 !------------------------------------------------------------------- 
@@ -571,11 +565,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
           do i=1,im
           !   dz(i,k)=(phii(i,k+1) - phii(i,k))*g_inv
              th(i,k)=t3d(i,k)/exner(i,k)
-          ! keep as specific humidity
-          !   qv(i,k)=qvsh(i,k)/(1.0 - qvsh(i,k))
-          !   qc(i,k)=qc(i,k)/(1.0 - qvsh(i,k))
-          !   qi(i,k)=qi(i,k)/(1.0 - qvsh(i,k))
-             rho(i,k)=prsl(i,k)/(r_d*t3d(i,k))
+             rho(i,k)=prsl(i,k)/(r_d*t3d(i,k)*(1.+p608*max(sqv(i,k),1e-8)))
              w(i,k) = -omega(i,k)/(rho(i,k)*grav)
          enddo
       enddo
@@ -593,6 +583,11 @@ SUBROUTINE mynnedmf_wrapper_run(        &
          ch(i)=0.0
          hfx(i)=hflx(i)*rho(i,1)*cp
          qfx(i)=qflx(i)*rho(i,1)
+         !filter bad incoming fluxes
+         if (hfx(i) > 1200.)hfx(i) = 1200.
+         if (hfx(i) < -500.)hfx(i) = -500.
+         if (qfx(i) > .0005)qfx(i) = 0.0005
+         if (qfx(i) < -.0002)qfx(i) = -0.0002
 
          dtsfc1(i) = hfx(i)
          dqsfc1(i) = qfx(i)*XLV
