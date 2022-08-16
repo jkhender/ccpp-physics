@@ -353,7 +353,7 @@ contains
      integer                              ::                             &
        iloop,nens3,ki,kk,i,k
      real(kind=kind_phys)                 ::                             &
-      dz,dzo,mbdt,radius,                                                &
+      dz,dzo,mbdt,radius,pefc,                                           &
       zcutdown,depth_min,zkbmax,z_detr,zktop,                            &
       dh,cap_maxs,trash,trash2,frh,sig_thresh
      real(kind=kind_phys) entdo,dp,subin,detdo,entup,                    &
