@@ -289,10 +289,10 @@
 
                 !Partition the convective clouds into water & frozen species
                 liqfrac = min(1., max(0., (Tk-244.)/29.))
-                qc(i,k) = qc(i,k)+qci_conv(i,k)*liqfrac
+                !qc(i,k) = qc(i,k)+qci_conv(i,k)*liqfrac
                 !split ice & snow 50-50%
-                qi(i,k) = qi(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
-                qs(i,k) = qs(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
+                !qi(i,k) = qi(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
+                !qs(i,k) = qs(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
 
                 !eff radius cloud water (microns)
                 if (nint(slmsk(i)) == 1) then !land

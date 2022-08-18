@@ -61,7 +61,7 @@ contains
       subroutine cu_gf_driver_run(ntracer,garea,im,km,dt,flag_init,flag_restart,&
                cactiv,cactiv_m,g,cp,xlv,r_v,forcet,forceqv_spechum,phil,raincv, &
                qv_spechum,t,cld1d,us,vs,t2di,w,qv2di_spechum,p2di,psuri,        &
-               hbot,htop,kcnv,xland,hfx2,qfx2,aod_gf,cliw,clcw,                 &
+               hbot,htop,kcnv,xland,hfx2,qfx2,aerodp,aod_gf,cliw,clcw,          &
                pbl,ud_mf,dd_mf,dt_mf,cnvw_moist,cnvc,imfshalcnv,                &
                flag_for_scnv_generic_tend,flag_for_dcnv_generic_tend,           &
                dtend,dtidx,ntqv,ntiw,ntcw,index_of_temperature,index_of_x_wind, &
@@ -138,6 +138,7 @@ contains
    ! Specific humidity from FV3
    real(kind=kind_phys), dimension (:,:), intent(in) :: qv2di_spechum
    real(kind=kind_phys), dimension (:,:), intent(inout) :: qv_spechum
+   real(kind=kind_phys), dimension (:,:), intent(in) :: aerodp
    real(kind=kind_phys), dimension (:), intent(inout) :: aod_gf
 !$acc declare copyin(qv2di_spechum) copy(qv_spechum,aod_gf)
    ! Local water vapor mixing ratios and cloud water mixing ratios
@@ -169,7 +170,6 @@ contains
    real(kind=kind_phys), dimension (im,km) :: dhdt,zu,zus,zd,phf,zum,zdm,outum,outvm
    real(kind=kind_phys), dimension (im,km) :: outts,outqs,outqcs,outu,outv,outus,outvs
    real(kind=kind_phys), dimension (im,km) :: outtm,outqm,outqcm,submm,cupclwm
-   real(kind=kind_phys), dimension (im,km) :: cnvwt,cnvwts,cnvwtm
    real(kind=kind_phys), dimension (im,km) :: hco,hcdo,zdo,zdd,hcom,hcdom,zdom
    real(kind=kind_phys), dimension    (km) :: zh
    real(kind=kind_phys), dimension (im)    :: tau_ecmwf,edt,edtm,edtd,ter11,aa0,xlandi
@@ -185,7 +185,7 @@ contains
 !$acc                dhdt,zu,zus,zd,phf,zum,zdm,outum,outvm,   &
 !$acc                outts,outqs,outqcs,outu,outv,outus,outvs, &
 !$acc                outtm,outqm,outqcm,submm,cupclwm,         &
-!$acc                cnvwt,cnvwts,cnvwtm,hco,hcdo,zdo,zdd,hcom,hcdom,zdom, &
+!$acc                hco,hcdo,zdo,zdd,hcom,hcdom,zdom, &
 !$acc                tau_ecmwf,edt,edtm,edtd,ter11,aa0,xlandi, &
 !$acc                pret,prets,pretm,hexec,forcing,forcing2,  &
 !$acc                kbcon, ktop,ierr,ierrs,ierrm,kpbli, &
@@ -410,11 +410,18 @@ contains
 
       ! set aod and ccn
       if (flag_init .and. .not.flag_restart) then
-        aod_gf(i)=aodc0
+        aod_gf(i)=aerodp(i,1)
       else
-        if((cactiv(i).eq.0) .and. (cactiv_m(i).eq.0))then
-          if(aodc0>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aodc0-aod_gf(i))*(dt/(aodreturn*60)))
-          if(aod_gf(i)>aodc0) aod_gf(i)=aodc0
+        if (imid_gf .eq. 0) then
+          if((cactiv(i).eq.0) .and. (cactiv_m(i).eq.0))then
+            if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+            if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+          endif
+        else
+          if(cactiv(i).eq.0)then
+            if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+            if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+          endif
         endif
       endif
 
@@ -507,10 +514,6 @@ contains
      cupclwm(:,:)=0.
      cupclws(:,:)=0.
 
-     cnvwt(:,:)=0.
-     cnvwts(:,:)=0.
-     cnvwtm(:,:)=0.
-
      hco(:,:)=0.
      hcom(:,:)=0.
      hcdo(:,:)=0.
@@ -543,12 +546,12 @@ contains
       do i=its,itf
         p2d(i,k)=0.01*p2di(i,k)
         po(i,k)=p2d(i,k) !*.01
-        rhoi(i,k) = 100.*p2d(i,k)/(287.04*(t2di(i,k)*(1.+0.608*qv2di(i,k))))
+        rhoi(i,k) = 100.*p2d(i,k)/(287.04*(t(i,k)*(1.+0.608*qv(i,k))))
         qcheck(i,k)=qv(i,k)
         tn(i,k)=t(i,k)!+forcet(i,k)*dt
         qo(i,k)=max(1.e-16,qv(i,k))!+forceqv(i,k)*dt
-        t2d(i,k)=t2di(i,k)-forcet(i,k)*dt
-        q2d(i,k)=max(1.e-16,qv2di(i,k)-forceqv(i,k)*dt)
+        t2d(i,k)=t(i,k)-forcet(i,k)*dt
+        q2d(i,k)=max(1.e-16,qv(i,k)-forceqv(i,k)*dt)
         if(qo(i,k).lt.1.e-16)qo(i,k)=1.e-16
         tshall(i,k)=t2d(i,k)
         qshall(i,k)=q2d(i,k)
@@ -583,8 +586,7 @@ contains
      nend=0
      do i=its,itf
       do k=kts,kpbli(i)
-       dhdt(i,k)=cp*(forcet(i,k)+(t(i,k)-t2di(i,k))/dt) +  &
-                 xlv*(forceqv(i,k)+(qv(i,k)-qv2di(i,k))/dt)
+       dhdt(i,k)=cp*forcet(i,k) + xlv*forceqv(i,k)
 !      tshall(i,k)=t(i,k)
 !      qshall(i,k)=qv(i,k)
       enddo
@@ -630,13 +632,13 @@ contains
 !
           call cu_gf_sh_run (us,vs,                                              &
 ! input variables, must be supplied
-                         zo,t2d,q2d,ter11,tshall,qshall,p2d,psur,dhdt,kpbli,     &
+                         zo,t2d,q2d,ter11,tn,qo,p2d,psur,dhdt,kpbli,             &
                          rhoi,hfx,qfx,xlandi,ichoice_s,tcrit,dt,                 &
 ! input variables. ierr should be initialized to zero or larger than zero for
 ! turning off shallow convection for grid points
                          zus,xmbs,kbcons,ktops,k22s,ierrs,ierrcs,                &
 ! output tendencies
-                         outts,outqs,outqcs,outus,outvs,cnvwt,prets,cupclws,     &
+                         outts,outqs,outqcs,outus,outvs,prets,cupclws,           &
 ! dimesnional variables
                          itf,ktf,its,ite, kts,kte,ipr,tropics)
 
@@ -672,9 +674,9 @@ contains
               ,t2d           &
               ,q2d           &
               ,ter11         &
-              ,tshall        &
-              ,qshall        &
-              ,p2d          &
+              ,tn            &
+              ,qo            &
+              ,p2d           &
               ,psur          &
               ,us            &
               ,vs            &
@@ -686,7 +688,6 @@ contains
               ,omeg          &
 
               ,cactiv_m      &
-              ,cnvwtm        &
               ,zum           &
               ,zdm           & ! hli
               ,zdd           &
@@ -721,16 +722,6 @@ contains
               ,do_cap_suppress_here,cap_suppress_j &
               ,k22m          &
               ,jminm,tropics)
-!$acc kernels
-            do i=its,itf
-             do k=kts,ktf
-              qcheck(i,k)=qv(i,k) +outqs(i,k)*dt
-             enddo
-            enddo
-!$acc end kernels
-!> - Call neg_check() for middle GF convection
-      call neg_check('mid',ipn,dt,qcheck,outqm,outtm,outum,outvm,   &
-                     outqcm,pretm,its,ite,kts,kte,itf,ktf,ktopm)
      endif
 !> - Call cu_gf_deep_run() for deep GF convection
      if(ideep.eq.1)then
@@ -768,7 +759,6 @@ contains
               ,omeg          &
 
               ,cactiv       &
-              ,cnvwt        &
               ,zu           &
               ,zd           &
               ,zdm          & ! hli
@@ -805,40 +795,18 @@ contains
               ,jmin,tropics)
           jpr=0
           ipr=0
-!$acc kernels
-          do i=its,itf
-           do k=kts,ktf
-            qcheck(i,k)=qv(i,k) +(outqs(i,k)+outqm(i,k))*dt
-           enddo
-          enddo
-!$acc end kernels
-!> - Call neg_check() for deep GF convection
-       call neg_check('deep',ipn,dt,qcheck,outq,outt,outu,outv,   &
-                      outqc,pret,its,ite,kts,kte,itf,ktf,ktop)
-!
       endif
-!            do i=its,itf
-!              kcnv(i)=0
-!              if(pret(i).gt.0.)then
-!                 cuten(i)=1.
-!                 kcnv(i)= 1 !jmin(i)
-!              else
-!                 kbcon(i)=0
-!                 ktop(i)=0
-!                 cuten(i)=0.
-!              endif   ! pret > 0
-!              if(pretm(i).gt.0.)then
-!                 kcnv(i)= 1 !jmin(i)
-!                 cutenm(i)=1.
-!              else
-!                 kbconm(i)=0
-!                 ktopm(i)=0
-!                 cutenm(i)=0.
-!              endif   ! pret > 0
-!            enddo
 !$acc kernels
             do i=its,itf
               kcnv(i)=0
+              if(pret(i).gt.0.)then
+                 cuten(i)=1.
+                 kcnv(i)= 1 !jmin(i)
+              else
+                 kbcon(i)=0
+                 ktop(i)=0
+                 cuten(i)=0.
+              endif   ! pret > 0
               if(pretm(i).gt.0.)then
                  kcnv(i)= 1 !jmin(i)
                  cutenm(i)=1.
@@ -847,20 +815,33 @@ contains
                  ktopm(i)=0
                  cutenm(i)=0.
               endif   ! pret > 0
-
-              if(pret(i).gt.0.)then
-                 cuten(i)=1.
-                 cutenm(i)=0.
-                 pretm(i)=0.
-                 kcnv(i)= 1 !jmin(i)
-                 ktopm(i)=0
-                 kbconm(i)=0
-              else
-                 kbcon(i)=0
-                 ktop(i)=0
-                 cuten(i)=0.
-              endif   ! pret > 0
             enddo
+!$acc end kernels
+!$acc kernels
+!            do i=its,itf
+!              kcnv(i)=0
+!              if(pretm(i).gt.0.)then
+!                 kcnv(i)= 1 !jmin(i)
+!                 cutenm(i)=1.
+!              else
+!                 kbconm(i)=0
+!                 ktopm(i)=0
+!                 cutenm(i)=0.
+!              endif   ! pret > 0
+!
+!              if(pret(i).gt.0.)then
+!                 cuten(i)=1.
+!                 cutenm(i)=0.
+!                 pretm(i)=0.
+!                 kcnv(i)= 1 !jmin(i)
+!                 ktopm(i)=0
+!                 kbconm(i)=0
+!              else
+!                 kbcon(i)=0
+!                 ktop(i)=0
+!                 cuten(i)=0.
+!              endif   ! pret > 0
+!            enddo
 !$acc end kernels
 !
 !$acc parallel loop private(kstop,dtime_max,massflx,trcflx_in1,clw_in1,po_cup)
@@ -888,9 +869,9 @@ contains
                            0.04 * log(1. + 675. * zus(i,k) * xmbs(i))
                cnvc(i,k) = min(cnvc(i,k), 0.6)
                cnvc(i,k) = max(cnvc(i,k), 0.0)
-               cnvw(i,k)=cnvwt(i,k)*xmb(i)*dt+cnvwts(i,k)*xmbs(i)*dt+cnvwtm(i,k)*xmbm(i)*dt
-               ud_mf(i,k)=cuten(i)*zu(i,k)*xmb(i)*dt
-               dd_mf(i,k)=cuten(i)*zd(i,k)*edt(i)*xmb(i)*dt
+               cnvw(i,k) = max(0., ( outqcs(i,k) + outqcm(i,k) + outqc(i,k)) * dt)
+               ud_mf(i,k)=(cuten(i)*zu(i,k)*xmb(i) + cutenm(i)*zum(i,k)*xmbm(i) + cutens(i)*zus(i,k)*xmbs(i))*dt
+               dd_mf(i,k)=(cuten(i)*zd(i,k)*edt(i)*xmb(i) + cutenm(i)*zdm(i,k)*edtm(i)*xmbm(i))*dt
                t(i,k)=t(i,k)+dt*(cutens(i)*outts(i,k)+cutenm(i)*outtm(i,k)+outt(i,k)*cuten(i))
                qv(i,k)=max(1.e-16,qv(i,k)+dt*(cutens(i)*outqs(i,k)+cutenm(i)*outqm(i,k)+outq(i,k)*cuten(i)))
                gdc(i,k,7)=sqrt(us(i,k)**2 +vs(i,k)**2)
@@ -898,9 +879,8 @@ contains
                vs(i,k)=vs(i,k)+outv(i,k)*cuten(i)*dt +outvm(i,k)*cutenm(i)*dt +outvs(i,k)*cutens(i)*dt
 
                gdc(i,k,1)= max(0.,tun_rad_shall(i)*cupclws(i,k)*cutens(i))      ! my mod
-               !gdc2(i,k,1)=max(0.,tun_rad_deep(i)*(cupclwm(i,k)*cutenm(i)+cupclw(i,k)*cuten(i)))
                !gdc2(i,k,1)=max(0.,tun_rad_mid(i)*cupclwm(i,k)*cutenm(i)+tun_rad_deep(i)*cupclw(i,k)*cuten(i)+tun_rad_shall(i)*cupclws(i,k)*cutens(i))
-               gdc2(i,k,1) = min(0.1, max(0.01, tun_rad_mid(i)*frhm(i)))*cupclwm(i,k)*cutenm(i) + min(0.1, max(0.01, tun_rad_deep(i)*(frhd(i))))*cupclw(i,k)*cuten(i) + tun_rad_shall(i)*cupclws(i,k)*cutens(i)
+               gdc2(i,k,1)=cnvw(i,k)
                qci_conv(i,k)=gdc2(i,k,1)
                gdc(i,k,2)=(outt(i,k))*86400.
                gdc(i,k,3)=(outtm(i,k))*86400.
@@ -1001,11 +981,10 @@ contains
             do i=its,itf
               if(pret(i).gt.0.)then
                  cactiv(i)=1
-                 raincv(i)=.001*(cutenm(i)*pretm(i)+cutens(i)*prets(i)+cuten(i)*pret(i))*dt
               else
                  cactiv(i)=0
-                 if(pretm(i).gt.0)raincv(i)=.001*cutenm(i)*pretm(i)*dt
               endif   ! pret > 0
+              raincv(i)=.001*(cutenm(i)*pretm(i)+cutens(i)*prets(i)+cuten(i)*pret(i))*dt
 
               if(pretm(i).gt.0)then
                  cactiv_m(i)=1
@@ -1024,10 +1003,8 @@ contains
               aod_gf(i)=0.0027*(ccn_gf(i)**0.64)
               if(aod_gf(i)<0.007)then
                 aod_gf(i)=0.007
-                ccn_gf(i)=(aod_gf(i)/0.0027)**(1/0.640)
-              elseif(aod_gf(i)>aodc0)then
-                aod_gf(i)=aodc0
-                ccn_gf(i)=(aod_gf(i)/0.0027)**(1/0.640)
+              elseif(aod_gf(i)>aerodp(i,1))then
+                aod_gf(i)=aerodp(i,1)
               endif
             enddo
 !$acc end kernels
