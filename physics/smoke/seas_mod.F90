@@ -13,7 +13,6 @@ module seas_mod
 
   implicit none
 
-  integer, parameter :: SEAS_OPT_DEFAULT = 1
   integer, parameter :: CHEM_OPT_GOCART  = 300
   integer, parameter :: chem_opt  = 300
 
@@ -21,8 +20,6 @@ module seas_mod
   integer, parameter :: emission_scheme = 3    ! GEOSS 2012
 
   private
-
-  public :: SEAS_OPT_DEFAULT
 
   public :: gocart_seasalt_driver
 

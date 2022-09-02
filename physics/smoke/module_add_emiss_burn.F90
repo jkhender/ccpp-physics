@@ -4,15 +4,14 @@
 module module_add_emiss_burn
 !RAR: significantly modified for the new BB emissions
   use machine ,        only : kind_phys
-  use rrfs_smoke_data
   use rrfs_smoke_config
 CONTAINS
-  subroutine add_emis_burn(data,dtstep,ktau,dz8w,rho_phy,rel_hum,    &
+  subroutine add_emis_burn(dtstep,ktau,dz8w,rho_phy,rel_hum,         &
                            chem,julday,gmt,xlat,xlong,               &
                            !luf_igbp,lu_fire1,                       &
                            vegtype,vfrac,peak_hr,                    &
                            time_int,ebu,                             &   ! RAR
-                           r_q,fhist,aod3d_smoke,aod3d_dust,         &
+                           r_q,fhist,ext3d_smoke,ext3d_dust,         &
  !                         nwfa,nifa,                                &
                            rainc,rainnc, swdown,smoke_forecast,      &
                            ids,ide, jds,jde, kds,kde,                &
@@ -22,7 +21,6 @@ CONTAINS
 !   USE module_configure, only: grid_config_rec_type
 !   USE module_state_description
    IMPLICIT NONE
-   type(smoke_data), intent(inout) :: data
 
 !   TYPE(grid_config_rec_type),  INTENT(IN   )    :: config_flags
 
@@ -40,7 +38,7 @@ CONTAINS
    real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(IN) ::  xlat,xlong, rainc,rainnc,swdown, peak_hr, vfrac
    real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(OUT)    ::  r_q    ! RAR:
    real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(INOUT)  ::  fhist  ! RAR:
-   real(kind_phys), DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(OUT) ::  aod3d_smoke, aod3d_dust    ! RAR:
+   real(kind_phys), DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(OUT) ::  ext3d_smoke, ext3d_dust    ! RAR:
    integer, DIMENSION(ims:ime,jms:jme), INTENT(IN) ::  vegtype
 
    real(kind_phys), DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN) :: dz8w,rho_phy,rel_hum
@@ -204,8 +202,8 @@ CONTAINS
                    chem(i,k,j,p_smoke)=1.e-16
                END IF
 
-               aod3d_smoke(i,k,j)= 1.e-6* ext2* chem(i,k,j,p_smoke )*rho_phy(i,k,j)*dz8w(i,k,j)
-               aod3d_dust (i,k,j)= 1.e-6* ext2* chem(i,k,j,p_dust_1)*rho_phy(i,k,j)*dz8w(i,k,j)
+               ext3d_smoke(i,k,j)= 1.e-6* ext2* chem(i,k,j,p_smoke )*rho_phy(i,k,j)*dz8w(i,k,j)
+               ext3d_dust (i,k,j)= 1.e-6* ext2* chem(i,k,j,p_dust_1)*rho_phy(i,k,j)*dz8w(i,k,j)
             enddo
            enddo
           enddo
@@ -213,8 +211,8 @@ CONTAINS
      IF ( ktau<2000 .and. dbg_opt ) then
          WRITE(*,*) 'add_emis_burn: i,j,k,ext2 ',i,j,k,ext2
          WRITE(*,*) 'add_emis_burn: rel_hum(its,kts,jts),rel_hum(ite,kfire_max,jte) ',rel_hum(its,kts,jts),rel_hum(ite,kfire_max,jte)
-         WRITE(*,*) 'add_emis_burn: aod3d_smoke(its,kts,jts),aod3d_smoke(ite,kfire_max,jte) ',aod3d_smoke(its,kts,jts),aod3d_smoke(ite,kfire_max,jte)
-         WRITE(*,*) 'add_emis_burn: aod3d_dust(its,kts,jts),aod3d_dust(ite,kfire_max,jte) ',aod3d_dust(its,kts,jts),aod3d_dust(ite,kfire_max,jte)
+         WRITE(*,*) 'add_emis_burn: ext3d_smoke(its,kts,jts),ext3d_smoke(ite,kfire_max,jte) ',ext3d_smoke(its,kts,jts),ext3d_smoke(ite,kfire_max,jte)
+         WRITE(*,*) 'add_emis_burn: ext3d_dust(its,kts,jts),ext3d_dust(ite,kfire_max,jte) ',ext3d_dust(its,kts,jts),ext3d_dust(ite,kfire_max,jte)
      END IF
 
 !     CASE DEFAULT

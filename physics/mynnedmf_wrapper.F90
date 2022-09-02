@@ -161,7 +161,8 @@ SUBROUTINE mynnedmf_wrapper_run(        &
      &  icloud_bl, do_mynnsfclay,                          &
      &  imp_physics, imp_physics_gfdl,                     &
      &  imp_physics_thompson, imp_physics_wsm6,            &
-     &  chem3d, frp, mix_chem, rrfs_smoke, fire_turb, nchem, ndvel, &
+     &  rrfs_sd, chem3d, frp, mix_chem, enh_mix,           &
+     &  nchem, ndvel, vdep, smoke_dbg,                     &
      &  imp_physics_nssl, nssl_ccn_on,                     &
      &  ltaerosol, spp_wts_pbl, spp_pbl, lprnt, huge, errmsg, errflg  )
 
@@ -185,6 +186,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
      !smoke/chem
      integer, intent(in) :: nchem, ndvel
      integer, parameter  :: kdvel=1
+     logical, intent(in) :: smoke_dbg
 
 ! NAMELIST OPTIONS (INPUT):
      logical, intent(in) ::                                 &
@@ -290,10 +292,10 @@ SUBROUTINE mynnedmf_wrapper_run(        &
 
 !smoke/chem arrays
       real(kind_phys), dimension(:), intent(inout) :: frp
-      logical, intent(in) :: mix_chem, fire_turb, rrfs_smoke
+      logical, intent(in) :: mix_chem, enh_mix, rrfs_sd
       real(kind=kind_phys), dimension(:,:,:), intent(inout) :: chem3d
+      real(kind=kind_phys), dimension(:,:  ), intent(inout) :: vdep
       real(kind=kind_phys), dimension(im)   :: emis_ant_no
-      real(kind=kind_phys), dimension(im,ndvel) :: vdep
 
 !MYNN-2D
       real(kind=kind_phys), dimension(:), intent(in) ::                  &
@@ -360,7 +362,6 @@ SUBROUTINE mynnedmf_wrapper_run(        &
 
       !initialize arrays for test
       EMIS_ANT_NO = 0.
-      vdep = 0. ! hli for chem dry deposition, 0 temporarily
 
   ! Check incoming moist species to ensure non-negative values
   ! First, create height (dz) and pressure differences (delp) 
@@ -719,10 +720,10 @@ SUBROUTINE mynnedmf_wrapper_run(        &
      &             sh3d=Sh3d,sm3d=Sm3d,                                &
 !chem/smoke
      &             nchem=nchem,kdvel=kdvel,ndvel=ndvel,                &
-     &             Chem3d=chem3d,Vdep=vdep,                            &
+     &             Chem3d=chem3d,Vdep=vdep,smoke_dbg=smoke_dbg,        &
      &             FRP=frp,EMIS_ANT_NO=emis_ant_no,                    &
-     &             mix_chem=mix_chem,fire_turb=fire_turb,              &
-     &             rrfs_smoke=rrfs_smoke,                              &
+     &             mix_chem=mix_chem,enh_mix=enh_mix,                  &
+     &             rrfs_sd=rrfs_sd,                                    &
 !-----
      &             Tsq=tsq,Qsq=qsq,Cov=cov,                            & !output
      &             RUBLTEN=RUBLTEN,RVBLTEN=RVBLTEN,RTHBLTEN=RTHBLTEN,  & !output

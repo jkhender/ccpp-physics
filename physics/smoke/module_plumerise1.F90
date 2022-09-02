@@ -3,7 +3,6 @@
 
  module module_plumerise1
 
-  use rrfs_smoke_data
   use machine , only : kind_phys
   real(kind=kind_phys),parameter :: p1000mb = 100000.  ! p at 1000mb (pascals)
 !- Implementing the fire radiative power (FRP) methodology for biomass burning
@@ -35,7 +34,7 @@
 !                              'aggr'   /) ! grassland
 
 CONTAINS
-subroutine ebu_driver (      data,flam_frac,ebb_smoke,ebu,           &
+subroutine ebu_driver (      flam_frac,ebb_smoke,ebu,           &
                              t_phy,q_vap,                            &   ! RAR: moist is replaced with q_vap
                              rho_phy,vvel,u_phy,v_phy,p_phy,         &
                              z_at_w,z,ktau,g,con_cp,con_rd,          &   ! scale_fire_emiss is part of config_flags
@@ -49,7 +48,6 @@ subroutine ebu_driver (      data,flam_frac,ebb_smoke,ebu,           &
   USE module_zero_plumegen_coms
   USE module_smoke_plumerise
   IMPLICIT NONE
-  type(smoke_data), intent(inout) :: data
 
    REAL(kind_phys), PARAMETER :: frp_threshold= 1.e+7   ! Minimum FRP (Watts) to have plume rise 
     
@@ -98,7 +96,6 @@ subroutine ebu_driver (      data,flam_frac,ebb_smoke,ebu,           &
 !     write(0,*)'plumerise'
 
 ! RAR:
-!      if (config_flags%biomass_burn_opt == BIOMASSB_SMOKE) then
 !          do j=jts,jte:
 !             do i=its,ite
 !                 ebu(i,kts,j,p_ebu_smoke)= ebb_smoke(i,j)
@@ -120,7 +117,7 @@ subroutine ebu_driver (      data,flam_frac,ebb_smoke,ebu,           &
            WRITE(*,*) 'module_plumerise1: ims,ime,jms,jme ', ims,ime,jms,jme
           !WRITE(*,*) 'module_plumerise1: p_ebu_smoke,num_ebu: ', p_ebu_smoke,num_ebu
            WRITE(*,*) 'module_plumerise1: maxval(ebu(:,kts,:)) ', maxval(ebu(:,kts,:))
-         END IF
+        END IF
       !endif
 
 ! RAR: setting to zero the ebu emissions at the levels k>1, this is necessary when the plumerise is called, so the emissions at k>1 are updated
@@ -151,7 +148,7 @@ subroutine ebu_driver (      data,flam_frac,ebb_smoke,ebu,           &
 ! RAR: new FRP based approach
 !check_pl:  IF (config_flags%plumerise_flag == 2 ) THEN    ! if the namelist option is set for plumerise 
 ! Haiqin: plumerise_flag is added to the namelist options
-!check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumerise 
+check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumerise
        do j=jts,jte
           do i=its,ite
               ! k_min(i,j)=0
@@ -185,7 +182,7 @@ subroutine ebu_driver (      data,flam_frac,ebb_smoke,ebu,           &
              END IF
 
 ! RAR: the plume rise calculation step:
-               CALL plumerise(data,kte,1,1,1,1,1,1,         &
+               CALL plumerise(kte,1,1,1,1,1,1,         &
                               !firesize,mean_fct,                    & 
                               !num_ebu, eburn_in, eburn_out,         &
                               u_in, v_in, w_in, theta_in ,pi_in,    &
@@ -213,7 +210,7 @@ subroutine ebu_driver (      data,flam_frac,ebb_smoke,ebu,           &
             enddo
           enddo
 
-!        ENDIF check_pl
+        ENDIF check_pl
 
 end subroutine ebu_driver
 

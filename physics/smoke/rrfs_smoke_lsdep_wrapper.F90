@@ -1,14 +1,13 @@
 !>\file rrfs_smoke_lsdep_wrapper.F90
 !! This file is RRFS-smoke large-scale wet deposition wrapper with CCPP
-!! Haiqin.Li@noaa.gov 04/2021
+!! Haiqin.Li@noaa.gov 08/2022
 
  module rrfs_smoke_lsdep_wrapper
 
    use machine ,        only : kind_phys
    use rrfs_smoke_config
-   use dep_wet_ls_mod
+   use module_wetdep_ls
    use dust_data_mod
-   use rrfs_smoke_data
 
    implicit none
 
@@ -29,16 +28,16 @@ contains
     subroutine rrfs_smoke_lsdep_wrapper_run(im, kte, kme, ktau, dt,     &
                    rain_cpl, rainc_cpl, g,                              &
                    pr3d, ph3d,phl3d, prl3d, tk3d, us3d, vs3d, spechum,  &
-                   w, dqdt, ntrac,ntsmoke,ntdust,                       &
-                   gq0,qgrs,wetdep_ls_opt_in,                    &
+                   w, dqdt, ntrac,ntsmoke,ntdust,nchem,gq0,             &
+                   wetdep_ls_opt_in,wetdep_ls_alpha_in, rrfs_sd,        &
                    errmsg,errflg)
 
     implicit none
 
 
     integer,        intent(in) :: im,kte,kme,ktau
-    integer,        intent(in) :: ntrac,ntsmoke,ntdust
-    real(kind_phys),intent(in) :: dt,g
+    integer,        intent(in) :: ntrac,ntsmoke,ntdust,nchem
+    real(kind_phys),intent(in) :: dt,g,wetdep_ls_alpha_in
 
     integer, parameter :: ids=1,jds=1,jde=1, kds=1
     integer, parameter :: ims=1,jms=1,jme=1, kms=1
@@ -48,8 +47,9 @@ contains
     real(kind_phys), dimension(:,:), intent(in) :: ph3d, pr3d
     real(kind_phys), dimension(:,:), intent(in) :: phl3d, prl3d, tk3d,        &
                 us3d, vs3d, spechum, w, dqdt
-    real(kind_phys), dimension(:,:,:), intent(inout) :: gq0, qgrs
+    real(kind_phys), dimension(:,:,:), intent(inout) :: gq0
     integer,           intent(in) :: wetdep_ls_opt_in
+    logical, intent(in) :: rrfs_sd
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
@@ -60,25 +60,22 @@ contains
 
 !>- vapor & chemistry variables
     real(kind_phys), dimension(ims:im, kms:kme, jms:jme, 1:num_moist)  :: moist 
-    real(kind_phys), dimension(ims:im, kms:kme, jms:jme, 1:num_chem )  :: chem
-    real(kind_phys), dimension(ims:im, jms:jme, 1:num_chem )  :: var_rmv
+    real(kind_phys), dimension(ims:im, kms:kme, jms:jme, 1:nchem    )  :: chem
 
     integer :: ide, ime, ite, kde
 
     real(kind_phys) :: dtstep
-    real(kind_phys), dimension(1:num_chem) :: ppm2ugkg
-
-    type(smoke_data), pointer :: data
 
 !>-- local variables
     integer :: i, j, jp, k, kp, n
 
-    data=>get_thread_smoke_data()
-
     errmsg = ''
     errflg = 0
 
+    if (.not. rrfs_sd) return
+
     wetdep_ls_opt     = wetdep_ls_opt_in
+    wetdep_ls_alpha   = wetdep_ls_alpha_in
     !print*,'hli wetdep_ls_opt',wetdep_ls_opt
 
     ! -- set domain
@@ -86,16 +83,6 @@ contains
     ime=im
     ite=im
     kde=kte
-
-    ! -- volume to mass fraction conversion table (ppm -> ug/kg)
-    ppm2ugkg         = 1._kind_phys
-   !ppm2ugkg(p_so2 ) = 1.e+03_kind_phys * mw_so2_aer / mwdry
-    ppm2ugkg(p_sulf) = 1.e+03_kind_phys * mw_so4_aer / mwdry
-
-    ! -- initialize large-sacle wet depostion
-    if (ktau==1) then
-     call dep_wet_ls_init(data)
-    endif
 
     ! -- set control flags
 
@@ -115,69 +102,49 @@ contains
 !!!
 
 !>- get ready for chemistry run
-    call rrfs_smoke_prep_lsdep(data,ktau,dtstep,                        &
+    if (wetdep_ls_opt == 1) then
+    call rrfs_smoke_prep_lsdep(ktau,dtstep,                             &
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,w, dqdt,           &
         rri,t_phy,u_phy,v_phy,p_phy,rho_phy,dz8w,p8w,                   &
         t8w,dqdti,z_at_w,vvel,g,                                        &
         ntsmoke,ntdust,                                                 &
-        ntrac,gq0,num_chem, num_moist,                                  &
-        ppm2ugkg,moist,chem,                                            &
+        ntrac,gq0,nchem, num_moist,                                     &
+        moist,chem,                                            &
         ids,ide, jds,jde, kds,kde,                                      &
         ims,ime, jms,jme, kms,kme,                                      &
         its,ite, jts,jte, kts,kte)
 
      ! -- ls wet deposition
-     select case (wetdep_ls_opt)
-       case (WDLS_OPT_GSD)
-         call wetdep_ls(data,dt,chem,rnav,moist,rho_phy,var_rmv,        &
-                        num_moist,num_chem,p_qc,p_qi,dz8w,vvel,         &
-                        ids,ide, jds,jde, kds,kde,                      &
-                        ims,ime, jms,jme, kms,kme,                      &
-                        its,ite, jts,jte, kts,kte)
-       case (WDLS_OPT_NGAC)
-         call WetRemovalGOCART(data,its,ite, jts,jte, kts,kte, 1,1, dt, &
-                               num_chem,var_rmv,chem,p_phy,t_phy,       &
-                               rho_phy,dqdti,rcav,rnav, g,              &
-                               ims,ime, jms,jme, kms,kme)
-         !if (chem_rc_check(localrc, msg="Failure in NGAC wet removal scheme", &
-         !  file=__FILE__, line=__LINE__, rc=rc)) return
-       case default
-         ! -- no further option implemented
-    end select
-
+       call  wetdep_ls(dt,chem,rcav,moist,                      &
+                     rho_phy,nchem,num_moist,dz8w,vvel,         &
+                     ids,ide, jds,jde, kds,kde,                 &
+                     ims,ime, jms,jme, kms,kme,                 &
+                     its,ite, jts,jte, kts,kte)
 
     ! -- put chem stuff back into tracer array
-    do k=kts,kte
+     do k=kts,kte
      do i=its,ite
-       gq0(i,k,ntsmoke)=ppm2ugkg(p_oc1   ) * max(epsilc,chem(i,k,1,p_oc1))
-       gq0(i,k,ntdust )=ppm2ugkg(p_dust_1) * max(epsilc,chem(i,k,1,p_dust_1))
+       gq0(i,k,ntsmoke)=max(epsilc,chem(i,k,1,1))
+       gq0(i,k,ntdust )=max(epsilc,chem(i,k,1,2))
      enddo
-    enddo
-
-    do k=kts,kte
-     do i=its,ite
-       qgrs(i,k,ntsmoke)=gq0(i,k,ntsmoke)
-       qgrs(i,k,ntdust )=gq0(i,k,ntdust )
      enddo
-    enddo
-
+    endif
 
 !
    end subroutine rrfs_smoke_lsdep_wrapper_run
 !> @}
 
-  subroutine rrfs_smoke_prep_lsdep(data,ktau,dtstep,                        &
+  subroutine rrfs_smoke_prep_lsdep(ktau,dtstep,                        &
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,w,dqdt,           &
         rri,t_phy,u_phy,v_phy,p_phy,rho_phy,dz8w,p8w,                  &
         t8w,dqdti,z_at_w,vvel,g,                                       &
         ntsmoke,ntdust,                                                &
-        ntrac,gq0,num_chem, num_moist,                                 &
-        ppm2ugkg,moist,chem,                                           &
+        ntrac,gq0,nchem, num_moist,                                    &
+        moist,chem,                                           &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte)
     implicit none
-    type(smoke_data), intent(inout) :: data
 
     !Chem input configuration
     integer, intent(in) :: ktau
@@ -192,17 +159,16 @@ contains
 
 
     !GSD Chem variables
-    integer,intent(in) ::  num_chem, num_moist
+    integer,intent(in) ::  nchem, num_moist
     integer,intent(in) ::  ids,ide, jds,jde, kds,kde,                      &
                            ims,ime, jms,jme, kms,kme,                      &
                            its,ite, jts,jte, kts,kte
 
-    real(kind_phys), dimension(num_chem), intent(in) :: ppm2ugkg
     
     real(kind_phys), dimension(ims:ime, kms:kme, jms:jme), intent(out) ::              & 
          rri, t_phy, u_phy, v_phy, p_phy, rho_phy, dz8w, p8w, t8w, vvel, dqdti
     real(kind_phys), dimension(ims:ime, kms:kme, jms:jme, num_moist), intent(out) :: moist
-    real(kind_phys), dimension(ims:ime, kms:kme, jms:jme, num_chem),  intent(out) :: chem
+    real(kind_phys), dimension(ims:ime, kms:kme, jms:jme, nchem    ), intent(out) :: chem
 
     real(kind_phys), dimension(ims:ime, kms:kme, jms:jme), intent(out) :: z_at_w
 
@@ -312,8 +278,8 @@ contains
  
     do k=kms,kte
      do i=ims,ime
-       chem(i,k,jts,p_oc1   )=max(epsilc,gq0(i,k,ntsmoke)/ppm2ugkg(p_oc1))
-       chem(i,k,jts,p_dust_1)=max(epsilc,gq0(i,k,ntdust )/ppm2ugkg(p_dust_1))
+       chem(i,k,jts,1)=max(epsilc,gq0(i,k,ntsmoke))
+       chem(i,k,jts,2)=max(epsilc,gq0(i,k,ntdust ))
      enddo
     enddo
 

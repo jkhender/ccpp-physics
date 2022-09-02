@@ -14,8 +14,6 @@
 module module_smoke_plumerise
 
   use machine , only : kind_phys
-  use rrfs_smoke_data
-  use rrfs_smoke_config, only : FIRE_OPT_GBBEPx, FIRE_OPT_MODIS
   use plume_data_mod,  only : num_frp_plume, p_frp_hr, p_frp_std,                  &
                               !tropical_forest, boreal_forest, savannah, grassland,   &
                               wind_eff
@@ -26,7 +24,7 @@ module module_smoke_plumerise
 CONTAINS
 
 ! RAR:
-    subroutine plumerise(data,m1,m2,m3,ia,iz,ja,jz,             &
+    subroutine plumerise(m1,m2,m3,ia,iz,ja,jz,             &
 !                         firesize,mean_fct,                         &
                         ! nspecies,eburn_in,eburn_out,               &
                          up,vp,wp,theta,pp,dn0,rv,zt_rams,zm_rams,  &
@@ -34,7 +32,6 @@ CONTAINS
                          cpor,  errmsg, errflg   )
 
   implicit none
-  type(smoke_data), intent(inout) :: data
 
   LOGICAL, INTENT (IN) :: dbg_opt
 
