@@ -447,6 +447,7 @@ contains
        bems(n) = 1.e+9*dsrc/(dxy*dt1) ! diagnostic (ug/m2/s) !lzhang
        
     END DO
+    tc(1)=tc(1)+tc(2)+tc(3) ! This is just for RRFS-SD. DO NOT use in other models!!!
 
   END SUBROUTINE source_dust
 
