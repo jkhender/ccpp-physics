@@ -1054,7 +1054,7 @@ CONTAINS
           !initialize smoke/chem arrays (if used):
              IF  ( rrfs_sd .and. mix_chem ) then
                 do ic = 1,ndvel
-                   vd1(ic) = vdep(i,ic) ! dry deposition veolocity
+                   vd1(ic) = vdep(i,ic) ! dry deposition velocity
                    chem1(kts,ic) = chem3d(i,kts,ic)
                    s_awchem1(kts,ic)=0.
                 enddo
@@ -1066,7 +1066,7 @@ CONTAINS
                 enddo
              ELSE
                 do ic = 1,ndvel
-                   vd1(ic) = 0. ! dry deposition veolocity
+                   vd1(ic) = 0. ! dry deposition velocity
                    chem1(kts,ic) = 0.
                    s_awchem1(kts,ic)=0.
                 enddo
