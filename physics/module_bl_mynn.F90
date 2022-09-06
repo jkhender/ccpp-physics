@@ -1052,7 +1052,7 @@ CONTAINS
           ENDDO ! end k
 
           !initialize smoke/chem arrays (if used):
-             IF  ( rrfs_sd .and. mix_chem ) then
+             IF  ( mix_chem ) then
                 do ic = 1,ndvel
                    vd1(ic) = vdep(i,ic) ! dry deposition velocity
                    chem1(kts,ic) = chem3d(i,kts,ic)
@@ -1349,7 +1349,7 @@ CONTAINS
                &bl_mynn_mixscalars               )
 
 
-          IF ( rrfs_sd .and. mix_chem ) THEN
+          IF ( mix_chem ) THEN
              CALL mynn_mix_chem(kts,kte,i,       &
                   &delt, dz1, pblh(i),           &
                   &nchem, kdvel, ndvel,          &
@@ -1359,7 +1359,7 @@ CONTAINS
                   &dfh,                          &
                   &s_aw1,s_awchem1,              &
                   &emis_ant_no(i),               &
-                  &frp(i),                       &
+                  &frp(i), rrfs_sd,              &
                   &enh_mix, smoke_dbg            )
 
              DO ic = 1,nchem
@@ -5251,7 +5251,7 @@ ENDIF
        flt, tcd, qcd,                     &
        dfh,                               &
        s_aw, s_awchem,                    &
-       emis_ant_no,frp,                   &
+       emis_ant_no, frp, rrfs_sd,         &
        enh_mix, smoke_dbg                )
 
 !-------------------------------------------------------------------
@@ -5266,7 +5266,7 @@ ENDIF
     REAL, DIMENSION( kts:kte+1,nchem), INTENT(IN) :: s_awchem
     REAL, DIMENSION( ndvel ), INTENT(IN) :: vd1
     REAL, INTENT(IN) :: emis_ant_no,frp,pblh
-    LOGICAL, INTENT(IN) :: enh_mix,smoke_dbg
+    LOGICAL, INTENT(IN) :: rrfs_sd,enh_mix,smoke_dbg
 !local vars
 
     REAL, DIMENSION(kts:kte)     :: dtz
@@ -5315,7 +5315,7 @@ ENDIF
     ENDDO
 
     !Enhanced mixing over fires
-    IF ( enh_mix ) THEN
+    IF ( rrfs_sd .and. enh_mix ) THEN
        kmaxfire = ceiling(log(frp))
        DO k=kts+1,kte-1
           khdz_old  = khdz(k)
