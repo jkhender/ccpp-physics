@@ -388,14 +388,15 @@ contains
     ! Set DRY threshold friction velocity to input value
     u_ts0 = uthres
 
-    g = g0*1.0E2
+    ! g = g0*1.0E2
+    g = g0
     emit=0.0
 
     DO n = 1, smx
        den(n) = den_salt(n)*1.0D-3         ! (g cm^-3)
        diam(n) = 2.0*reff_salt(n)*1.0D2    ! (cm)
-       rhoa = airden*1.0D-3                ! (g cm^-3)
-       
+       !rhoa = airden*1.0D-3                ! (g cm^-3)
+       rhoa = airden
        call DustEmissionFENGSHA(smois,massfrac(1),massfrac(3), massfrac(2), &
                                 erod, R, rhoa, ustar, uthres, alpha, gamma, kvhmax, & 
                                 g, RHOSOIL, salt)
@@ -447,7 +448,7 @@ contains
        bems(n) = 1.e+9*dsrc/(dxy*dt1) ! diagnostic (ug/m2/s) !lzhang
        
     END DO
-    tc(1)=tc(1)+tc(2)+tc(3) ! This is just for RRFS-SD. DO NOT use in other models!!!
+    tc(1)=tc(1)+tc(2) ! This is just for RRFS-SD. DO NOT use in other models!!!
 
   END SUBROUTINE source_dust
 
