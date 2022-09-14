@@ -58,17 +58,18 @@ contains
 !!
 !>\section gen_gf_driver GSD GF Cumulus Scheme General Algorithm
 !> @{
-      subroutine cu_gf_driver_run(ntracer,garea,im,km,dt,flag_init,flag_restart,&
+      subroutine cu_gf_driver_run(ntracer,garea,im,km,kdt,dt,flag_init,flag_restart,&
                cactiv,cactiv_m,g,cp,xlv,r_v,forcet,forceqv_spechum,phil,raincv, &
                qv_spechum,t,cld1d,us,vs,t2di,w,qv2di_spechum,p2di,psuri,        &
-               hbot,htop,kcnv,xland,hfx2,qfx2,aerodp,aod_gf,cliw,clcw,          &
+               hbot,htop,kcnv,xland,hfx2,qfx2,aerodp,aod_gf,aod_da,cliw,clcw,   &
                pbl,ud_mf,dd_mf,dt_mf,cnvw_moist,cnvc,imfshalcnv,                &
                flag_for_scnv_generic_tend,flag_for_dcnv_generic_tend,           &
                dtend,dtidx,ntqv,ntiw,ntcw,index_of_temperature,index_of_x_wind, &
                index_of_y_wind,index_of_process_scnv,index_of_process_dcnv,     &
                fhour,fh_dfi_radar,ix_dfi_radar,num_dfi_radar,cap_suppress,      &
                dfi_radar_max_intervals,ldiag3d,qci_conv,do_cap_suppress,        &
-               errmsg,errflg)
+               fhswr,nsswr,qci_conv_accum,qci_conv_timeave,ud_mf_accum,         &
+               ud_mf_timeave,errmsg,errflg)
 !-------------------------------------------------------------
       implicit none
       integer, parameter :: maxiens=1
@@ -79,8 +80,8 @@ contains
       integer, parameter :: imid_gf=1    ! testgf2 turn on middle gf conv.
       integer, parameter :: ideep=1
       integer, parameter :: ichoice=0	! 0 2 5 13 8
-     !integer, parameter :: ichoicem=5	! 0 2 5 13
-      integer, parameter :: ichoicem=13	! 0 2 5 13
+      integer, parameter :: ichoicem=5	! 0 2 5 13
+      !integer, parameter :: ichoicem=13	! 0 2 5 13
       integer, parameter :: ichoice_s=3	! 0 1 2 3
 
       logical, intent(in) :: do_cap_suppress
@@ -106,7 +107,8 @@ contains
 !$acc declare copyin(dtidx)
    real(kind=kind_phys),  dimension( : , : ), intent(in    ) :: forcet,forceqv_spechum,w,phil
    real(kind=kind_phys),  dimension( : , : ), intent(inout ) :: t,us,vs
-   real(kind=kind_phys),  dimension( : , : ), intent(inout ) :: qci_conv
+   real(kind=kind_phys),  dimension( : , : ), intent(inout ) :: qci_conv,qci_conv_accum,qci_conv_timeave
+   real(kind=kind_phys),  dimension( : , : ), intent(inout ) :: ud_mf_accum,ud_mf_timeave
    real(kind=kind_phys),  dimension( : , : ), intent(out   ) :: cnvw_moist,cnvc
    real(kind=kind_phys),  dimension( : , : ), intent(inout ) :: cliw, clcw
 !$acc declare copyin(forcet,forceqv_spechum,w,phil)
@@ -140,6 +142,7 @@ contains
    real(kind=kind_phys), dimension (:,:), intent(inout) :: qv_spechum
    real(kind=kind_phys), dimension (:,:), intent(in) :: aerodp
    real(kind=kind_phys), dimension (:), intent(inout) :: aod_gf
+   real(kind=kind_phys), dimension (:,:), intent(in) :: aod_da
 !$acc declare copyin(qv2di_spechum) copy(qv_spechum,aod_gf)
    ! Local water vapor mixing ratios and cloud water mixing ratios
    real(kind=kind_phys), dimension (im,km) :: qv2di, qv, forceqv, cnvw
@@ -147,9 +150,9 @@ contains
    !
    real(kind=kind_phys), dimension(:),intent(in) :: garea
 !$acc declare copyin(garea)
-   real(kind=kind_phys), intent(in   ) :: dt
+   real(kind=kind_phys), intent(in   ) :: dt,fhswr
 
-   integer, intent(in   ) :: imfshalcnv
+   integer, intent(in   ) :: imfshalcnv,kdt,nsswr
    integer, dimension(:), intent(inout) :: cactiv,cactiv_m
 !$acc declare copy(cactiv,cactiv_m)
 
@@ -306,6 +309,9 @@ contains
      forceqv = forceqv_spechum/(1.0_kind_phys-qv2di_spechum)
      ! current state (updated by preceeding physics)
      qv = qv_spechum/(1.0_kind_phys-qv_spechum)
+
+     clcw = clcw/(1.0_kind_phys-qv_spechum)
+     cliw = cliw/(1.0_kind_phys-qv_spechum)
 !
 !
 ! these should be coming in from outside
@@ -375,6 +381,13 @@ contains
      dd_mf(:,:) =0.
      dt_mf(:,:) =0.
      tau_ecmwf(:)=0.
+     if (flag_init) then
+       ud_mf_accum(:,:)=0.
+       ud_mf_timeave(:,:)=0.
+       qci_conv_accum(:,:)=0.
+       qci_conv_timeave(:,:)=0.
+     endif
+
 !$acc end kernels
 !
      j=1
@@ -410,17 +423,22 @@ contains
 
       ! set aod and ccn
       if (flag_init .and. .not.flag_restart) then
-        aod_gf(i)=aerodp(i,1)
+        !aod_gf(i)=aerodp(i,1)
+        aod_gf(i)=aod_da(i,1)
       else
         if (imid_gf .eq. 0) then
           if((cactiv(i).eq.0) .and. (cactiv_m(i).eq.0))then
-            if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
-            if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+            !if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+            !if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+            if(aod_da(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aod_da(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+            if(aod_gf(i)>aod_da(i,1)) aod_gf(i)=aod_da(i,1)
           endif
         else
           if(cactiv(i).eq.0)then
-            if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
-            if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+            !if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+            !if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+            if(aod_da(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aod_da(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+            if(aod_gf(i)>aod_da(i,1)) aod_gf(i)=aod_da(i,1)
           endif
         endif
       endif
@@ -878,9 +896,9 @@ contains
                us(i,k)=us(i,k)+outu(i,k)*cuten(i)*dt +outum(i,k)*cutenm(i)*dt +outus(i,k)*cutens(i)*dt
                vs(i,k)=vs(i,k)+outv(i,k)*cuten(i)*dt +outvm(i,k)*cutenm(i)*dt +outvs(i,k)*cutens(i)*dt
 
-               gdc(i,k,1)= max(0.,tun_rad_shall(i)*cupclws(i,k)*cutens(i))      ! my mod
+               gdc(i,k,1)= max(0.,tun_rad_shall(i)*cupclws(i,k)*cutens(i)) ! my mod
                !gdc2(i,k,1)=max(0.,tun_rad_mid(i)*cupclwm(i,k)*cutenm(i)+tun_rad_deep(i)*cupclw(i,k)*cuten(i)+tun_rad_shall(i)*cupclws(i,k)*cutens(i))
-               gdc2(i,k,1)=cnvw(i,k)
+               gdc2(i,k,1) = max(0., tun_rad_mid(i)*frhm(i)*cupclwm(i,k)*cutenm(i)*xmbm(i) + tun_rad_deep(i)*frhd(i)*cupclw(i,k)*cuten(i)*xmb(i) + tun_rad_shall(i)*cupclws(i,k)*cutens(i)*xmbs(i))
                qci_conv(i,k)=gdc2(i,k,1)
                gdc(i,k,2)=(outt(i,k))*86400.
                gdc(i,k,3)=(outtm(i,k))*86400.
@@ -979,6 +997,27 @@ contains
 !$acc end parallel
 !$acc kernels
             do i=its,itf
+             do k=kts,ktf
+               if (flag_init) then
+                  !write(0,*)'init',kdt
+                  qci_conv_accum(i,k)=gdc2(i,k,1)/(1.0_kind_phys+qv(i,k))
+                  qci_conv_timeave(i,k)=gdc2(i,k,1)/(1.0_kind_phys+qv(i,k))
+                  ud_mf_accum(i,k)=ud_mf(i,k)
+                  ud_mf_timeave(i,k)=ud_mf(i,k)
+               else if (MOD(kdt+1,nsswr) .eq. 0) then
+                  qci_conv_timeave(i,k) = (qci_conv_accum(i,k) + (gdc2(i,k,1)/(1.0_kind_phys+qv(i,k))))/fhswr
+                  qci_conv_accum(i,k)= 0.
+                  ud_mf_timeave(i,k) = (ud_mf_accum(i,k) + ud_mf(i,k))/fhswr
+                  ud_mf_accum(i,k)= 0.
+                  !write(0,*)'recalc',kdt,ud_mf_accum(i,k),ud_mf_timeave(i,k),ud_mf(i,k)
+               else
+                  qci_conv_accum(i,k) = qci_conv_accum(i,k) + (gdc2(i,k,1)/(1.0_kind_phys+qv(i,k)))
+                  qci_conv_timeave(i,k) = qci_conv_timeave(i,k)
+                  ud_mf_accum(i,k) = ud_mf_accum(i,k) + ud_mf(i,k)
+                  ud_mf_timeave(i,k) = ud_mf_timeave(i,k)
+                  !write(0,*)'hold',kdt,ud_mf_accum(i,k),ud_mf_timeave(i,k),ud_mf(i,k)
+               endif
+             enddo
               if(pret(i).gt.0.)then
                  cactiv(i)=1
               else
@@ -1003,8 +1042,10 @@ contains
               aod_gf(i)=0.0027*(ccn_gf(i)**0.64)
               if(aod_gf(i)<0.007)then
                 aod_gf(i)=0.007
-              elseif(aod_gf(i)>aerodp(i,1))then
-                aod_gf(i)=aerodp(i,1)
+              !elseif(aod_gf(i)>aerodp(i,1))then
+              !  aod_gf(i)=aerodp(i,1)
+              elseif(aod_gf(i)>aod_da(i,1))then
+                aod_gf(i)=aod_da(i,1)
               endif
             enddo
 !$acc end kernels
@@ -1015,6 +1056,9 @@ contains
 !$acc kernels
         qv_spechum = qv/(1.0_kind_phys+qv)
         cnvw_moist = cnvw/(1.0_kind_phys+qv)
+
+        clcw = clcw/(1.0_kind_phys+qv)
+        cliw = cliw/(1.0_kind_phys+qv)
 !$acc end kernels
 !
 ! Diagnostic tendency updates

@@ -4436,7 +4436,9 @@ endif
 !$acc loop independent
        do k=k22(i)+1,ktop(i)
 !$acc atomic
+           dp=p_cup(i,k-1)-p_cup(i,k)
            qc(i,k)=qc(i,k)-qrc(i,k)
+           clw_all(i,k)=qrc(i,k)*(g/dp)*zu(i,k)
        enddo
       endif ! ierr
 !

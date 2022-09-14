@@ -106,6 +106,28 @@
   type = real
   kind = kind_phys
   intent = in
+[kdt]
+  standard_name = index_of_timestep
+  long_name = current forecast iteration
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[nsswr]
+  standard_name = number_of_timesteps_between_shortwave_radiation_calls
+  long_name = number of timesteps between shortwave radiation calls
+  units =
+  dimensions = ()
+  type = integer
+  intent = in
+[fhswr]
+  standard_name = period_of_shortwave_radiation_calls
+  long_name = frequency for shortwave radiation
+  units = s
+  dimensions = ()
+  type = real
+  kind = kind_phys
+  intent = in
 [flag_init]
   standard_name = flag_for_first_timestep
   long_name = flag signaling first time step for time integration loop
@@ -370,6 +392,22 @@
   type = real
   kind = kind_phys
   intent = out
+[ud_mf_accum]
+  standard_name = accumulated_atmosphere_updraft_convective_mass_flux
+  long_name = accumulated (updraft mass flux) * delt
+  units = kg m-2
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ud_mf_timeave]
+  standard_name = time_average_atmosphere_updraft_convective_mass_flux
+  long_name = time averaged (updraft mass flux) * delt
+  units = kg m-2
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
 [dd_mf]
   standard_name = instantaneous_atmosphere_downdraft_convective_mass_flux
   long_name = (downdraft mass flux) * delt
@@ -511,6 +549,22 @@
 [qci_conv]
   standard_name = convective_cloud_condesate_after_rainout
   long_name = convective cloud condesate after rainout
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[qci_conv_accum]
+  standard_name = accumulated_convective_cloud_condesate_after_rainout
+  long_name = accumulatedconvective cloud condesate after rainout
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[qci_conv_timeave]
+  standard_name = time_averaged_convective_cloud_condesate_after_rainout
+  long_name = time averaged convective cloud condesate after rainout
   units = kg kg-1
   dimensions = (horizontal_loop_extent,vertical_layer_dimension)
   type = real

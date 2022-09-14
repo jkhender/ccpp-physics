@@ -47,7 +47,7 @@
 !>\section sgscloud_radpre GSD SGS Scheme General Algorithm
 !> @{
       subroutine sgscloud_radpre_run(    &
-           im,dt,levs,                   &
+           im,dt,fhswr,levs,             &
            flag_init,flag_restart,       &
            con_g, con_pi, eps, epsm1,    &
            r_v, cpv, rcp,                &
@@ -56,6 +56,8 @@
            qc, qi, qv, T3D, P3D, exner,  &
            qr, qs, qg,                   &
            qci_conv,ud_mf,               &
+           qci_conv_timeave,             &
+           ud_mf_timeave, &
            imfdeepcnv, imfdeepcnv_gf,    &
            qc_save, qi_save, qs_save,    &
            qc_bl,qi_bl,cldfra_bl,        &
@@ -79,7 +81,7 @@
       real(kind=kind_phys), intent(in) :: con_g, con_pi, eps, epsm1
       real(kind=kind_phys), intent(in) :: r_v, cpv, rcp
       real(kind=kind_phys), intent(in) :: xlv, xlf, cp
-      real(kind=kind_phys), intent(in) :: dt
+      real(kind=kind_phys), intent(in) :: dt,fhswr
       real :: xls, xlvcp, xlscp !derived below
       real(kind=kind_phys)             :: gfac
       integer,             intent(in)  :: im, levs, imfdeepcnv, imfdeepcnv_gf, &
@@ -90,7 +92,8 @@
       real(kind=kind_phys), dimension(:,:), intent(inout) :: qr, qs, qg
       ! qci_conv only allocated if GF is used
       real(kind=kind_phys), dimension(:,:), intent(inout) :: qci_conv
-      real(kind=kind_phys), dimension(:,:), intent(in)    :: ud_mf
+      real(kind=kind_phys), dimension(:,:), intent(in)    ::ud_mf
+      real(kind=kind_phys), dimension(:,:), intent(in)    ::ud_mf_timeave, qci_conv_timeave
       real(kind=kind_phys), dimension(:,:), intent(in)    :: T3D,delp
       real(kind=kind_phys), dimension(:,:), intent(in)    :: qv,P3D,exner
       real(kind=kind_phys), dimension(:,:), intent(inout) ::  &
@@ -283,16 +286,16 @@
           do k = 1, levs
             do i = 1, im
               !if ( qci_conv(i,k) > 0. .AND. (qi(i,k) < 1E-7 .AND. qc(i,k) < 1E-7 ) ) then
-              if ( qci_conv(i,k) > 0. ) then
+              if ( qci_conv_timeave(i,k) > 0. ) then
                 Tk = T3D(i,k)
                 Tc = Tk - 273.15
 
                 !Partition the convective clouds into water & frozen species
                 liqfrac = min(1., max(0., (Tk-244.)/29.))
-                !qc(i,k) = qc(i,k)+qci_conv(i,k)*liqfrac
+                qc(i,k) = qc(i,k)+qci_conv_timeave(i,k)*fhswr*liqfrac
                 !split ice & snow 50-50%
-                !qi(i,k) = qi(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
-                !qs(i,k) = qs(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
+                qi(i,k) = qi(i,k)+0.5*qci_conv_timeave(i,k)*fhswr*(1. - liqfrac)
+                qs(i,k) = qs(i,k)+0.5*qci_conv_timeave(i,k)*fhswr*(1. - liqfrac)
 
                 !eff radius cloud water (microns)
                 if (nint(slmsk(i)) == 1) then !land
@@ -305,7 +308,7 @@
                 if(qi(i,k)>1.e-8)clouds5(i,k)=max(     173.45 + 2.14*Tc , 20.)
                 if(qs(i,k)>1.e-8)clouds9(i,k)=max(2.0*(173.45 + 2.14*Tc), 50.)
 
-                if ( conv_cf_opt .eq. 0 ) then
+                if ( conv_cf_opt .eq. 0 .and. qci_conv_timeave(i,k) .gt. 0. ) then
                    !print *,'Chab-Bechtold cloud fraction used'
                    !  clouds1(i,k) = cldfra_bl(i,k)
 
@@ -328,12 +331,13 @@
                    else                           ! scaling function (CB2005)
                       f = 1.0
                    endif
-                   sigq = 1.5E-3 * ud_mf(i,k)/dt * f
+                   sigq = ud_mf(i,k)_timeave/dt * f
+                   !sigq = 1.5E-3 * ud_mf(i,k)/dt * f
                    !sigq = 3.E-3 * ud_mf(i,k)/dt * f
                    sigq = SQRT(sigq**2 + 1e-10)   ! combined conv + background components
                    qmq  = a * (qt - qsat)         ! saturation deficit/excess;
                                                   !   the numerator of Q1
-                   cb_cf= min(max(0.5 + 0.36 * atan(1.55*(qmq/sigq)),0.01),0.99)
+                   cb_cf= min(max(0.5 + 0.36 * atan(1.55*(qmq/sigq)),0.0),0.99)
                    if (do_mynnedmf .and. qmq .ge. 0.0) then
                       ! leverage C-B stratus clouds from MYNN in saturated conditions
                       clouds1(i,k) = 0.5*(clouds1(i,k) + cb_cf)
