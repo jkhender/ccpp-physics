@@ -331,7 +331,7 @@
                    else                           ! scaling function (CB2005)
                       f = 1.0
                    endif
-                   sigq = ud_mf(i,k)_timeave/dt * f
+                   sigq = ud_mf_timeave(i,k)/dt * f
                    !sigq = 1.5E-3 * ud_mf(i,k)/dt * f
                    !sigq = 3.E-3 * ud_mf(i,k)/dt * f
                    sigq = SQRT(sigq**2 + 1e-10)   ! combined conv + background components
