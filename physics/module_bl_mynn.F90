@@ -5316,7 +5316,6 @@ ENDIF
 
     !Enhanced mixing over fires
     IF ( rrfs_sd .and. enh_mix ) THEN
-       kmaxfire = ceiling(log(frp))
        DO k=kts+1,kte-1
           khdz_old  = khdz(k)
           khdz_back = pblh * 0.15 / dz(k)
@@ -5327,6 +5326,7 @@ ENDIF
 !                khdz(k) = MAX(khdz(k),khdz_back)
              ENDIF
              IF ( frp > frp_threshold ) THEN
+                kmaxfire = ceiling(log(frp))
                 khdz(k) = MAX(1.1*khdz(k), (1. - k/(kmaxfire*2.)) * ((log(frp))**2.- 2.*log(frp)) / dz(k)*rhoz(k)) ! JLS 12/21/21
 !                khdz(k) = MAX(khdz(k),khdz_back)
              ENDIF
