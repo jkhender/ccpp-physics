@@ -365,9 +365,9 @@
   type = real
   kind = kind_phys
   intent = in
-[smoke_GBBEPx]
-  standard_name = emission_smoke_GBBEPx
-  long_name = emission fire GBBEPx
+[smoke_RRFS]
+  standard_name = emission_smoke_RRFS
+  long_name = emission fire RRFS
   units = various
   dimensions = (horizontal_loop_extent,24,3)
   type = real
@@ -613,6 +613,14 @@
   type = real
   kind = kind_phys
   intent = in
+[fire_in]
+  standard_name = smoke_fire_auxeliary_input
+  long_name = smoke fire auxeliary input variables
+  units = various
+  dimensions = (horizontal_loop_extent,10)
+  type = real
+  kind = kind_phys
+  intent = inout
 [seas_opt_in]
   standard_name = control_for_smoke_sea_salt
   long_name = rrfs smoke sea salt emission option
@@ -633,6 +641,21 @@
   units = index
   dimensions = ()
   type = integer
+  intent = in
+[wetdep_ls_opt_in]
+  standard_name = control_for_smoke_wet_deposition
+  long_name = rrfs smoke large scale wet deposition option
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[wetdep_ls_alpha_in]
+  standard_name = alpha_for_ls_wet_depoistion
+  long_name = alpha paramter for ls wet deposition
+  units = none
+  dimensions = ()
+  type = real
+  kind = kind_phys
   intent = in
 [do_plumerise_in]
   standard_name = do_smoke_plumerise
@@ -657,10 +680,10 @@
   intent = in
 [smoke_forecast_in]
   standard_name = do_smoke_forecast
-  long_name = flag for rrfs smoke forecast
-  units = flag
+  long_name = index for rrfs smoke forecast
+  units = index
   dimensions = ()
-  type = logical
+  type = integer
   intent = in
 [aero_ind_fdb_in]
   standard_name = do_smoke_aerosol_indirect_feedback

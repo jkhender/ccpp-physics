@@ -23,13 +23,13 @@ module rrfs_smoke_config
   integer :: seas_opt = 2
   logical :: do_plumerise  = .true.
   integer :: addsmoke_flag = 1
-  integer :: plumerisefire_frq=60  ! Let's add to the namelist
+  integer :: plumerisefire_frq=60
   integer :: wetdep_ls_opt = 1
   integer :: drydep_opt  = 1
   logical :: bb_dcycle   = .false.
-  logical :: smoke_forecast = .false.
   logical :: aero_ind_fdb = .false.
   logical :: dbg_opt     = .true.
+  integer :: smoke_forecast = 0 ! 0 read in ebb_smoke(i,24)
   real(kind_phys) :: wetdep_ls_alpha = .5 ! scavenging factor
 
   ! --
@@ -47,7 +47,6 @@ module rrfs_smoke_config
   ! -- FV3 GFDL microphysics
   integer, parameter :: p_atm_shum = 1
   integer, parameter :: p_atm_cldq = 2
-  integer, parameter :: p_atm_o3mr = 7
 
   integer :: numgas = 0
 

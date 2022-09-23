@@ -49,7 +49,7 @@ CONTAINS
 
     real(kind_phys), INTENT(IN) ::  dtstep, gmt
     real(kind_phys), INTENT(IN) ::  time_int       ! RAR: time in seconds since start of simulation
-    logical,         INTENT(IN) ::  smoke_forecast
+    integer,         INTENT(IN) ::  smoke_forecast
 
     integer :: i,j,k,n,m
     real(kind_phys) :: conv_rho, conv, ext2, dm_smoke, daero_num_wfa, daero_num_ifa !, lu_sum1_5, lu_sum12_14
@@ -146,7 +146,7 @@ CONTAINS
            !    r_q(i,j)= fhist(i,j)    ! no diurnal cycle
            !END IF
 
-          !IF (.NOT. smoke_forecast) THEN
+          !IF (smoke_forecast == 0) THEN
                r_q(i,j)= 1.
           !END IF
 
