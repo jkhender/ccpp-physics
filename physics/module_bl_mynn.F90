@@ -1350,6 +1350,7 @@ CONTAINS
 
 
           IF ( mix_chem ) THEN
+            IF ( rrfs_sd ) THEN
              CALL mynn_mix_chem(kts,kte,i,       &
                   &delt, dz1, pblh(i),           &
                   &nchem, kdvel, ndvel,          &
@@ -1361,7 +1362,19 @@ CONTAINS
                   &emis_ant_no(i),               &
                   &frp(i), rrfs_sd,              &
                   &enh_mix, smoke_dbg            )
-
+            ELSE
+             CALL mynn_mix_chem(kts,kte,i,       &
+                  &delt, dz1, pblh(i),           &
+                  &nchem, kdvel, ndvel,          &
+                  &chem1, vd1,                   &
+                  &rho1,flt,                     &
+                  &tcd, qcd,                     &
+                  &dfh,                          &
+                  &s_aw1,s_awchem1,              &
+                  &zero,                         &
+                  &zero, rrfs_sd,                &
+                  &enh_mix, smoke_dbg            )
+            ENDIF
              DO ic = 1,nchem
                 DO k = kts,kte
                    chem3d(i,k,ic) = max(1.e-12, chem1(k,ic))
