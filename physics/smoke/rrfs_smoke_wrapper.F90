@@ -171,7 +171,6 @@ contains
     wetdep_ls_opt     = wetdep_ls_opt_in
     wetdep_ls_alpha   = wetdep_ls_alpha_in
 
-    !print*,'hli ktau',ktau
     ! -- set domain
     ide=im 
     ime=im
@@ -218,7 +217,7 @@ contains
     
 !>- get ready for chemistry run
     call rrfs_smoke_prep(                                               &
-        ktau, current_month, current_hour, gmt,                         &
+        current_month, current_hour, gmt,                               &
         u10m,v10m,ustar,land,garea,rlat,rlon,tskin,                     &
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,exch,w,            &
         nsoil,smc,vegtype,soiltyp,sigmaf,dswsfc,zorl,                   &
@@ -290,7 +289,7 @@ contains
 !>- compute sea-salt
     ! -- compute sea salt (opt=2)
     if (seas_opt == 2) then
-    call gocart_seasalt_driver(ktau,dt,rri,t_phy,moist,                 &
+    call gocart_seasalt_driver(dt,rri,t_phy,moist,                      &
         u_phy,v_phy,chem,rho_phy,dz8w,u10,v10,ust,p8w,tsk,              &
         xland,xlat,xlong,dxy,g,emis_seas,pi,                            &
         seashelp,num_emis_seas,num_moist,num_chem,seas_opt,             &
@@ -320,12 +319,11 @@ contains
     ! Every hour (per namelist) the ebu_driver is called to calculate ebu, but
     ! the plumerise is controlled by the namelist option of plumerise_flag
     if (call_fire) then
-!       WRITE(*,*) 'plumerise is called at ktau= ',ktau
         call ebu_driver (                                              &
                    flam_frac,ebu_in,ebu,                          &
                    t_phy,moist(:,:,:,p_qv),                            &
                    rho_phy,vvel,u_phy,v_phy,p_phy,                     &
-                   z_at_w,zmid,ktau,g,con_cp,con_rd,                   &
+                   z_at_w,zmid,g,con_cp,con_rd,                        &
                    plume_frp, min_fplume2, max_fplume2,                &   ! new approach
                    ids,ide, jds,jde, kds,kde,                          &
                    ims,ime, jms,jme, kms,kme,                          &
@@ -335,7 +333,7 @@ contains
 
     ! -- add biomass burning emissions at every timestep
     if (addsmoke_flag == 1) then
-    call add_emis_burn(dt,ktau,dz8w,rho_phy,rel_hum,chem,            &
+    call add_emis_burn(dt,dz8w,rho_phy,rel_hum,chem,                 &
                        julday,gmt,xlat,xlong,                        &
                        ivgtyp, vegfrac, peak_hr,                     &   ! RAR
                        curr_secs,ebu,                                &
@@ -345,7 +343,6 @@ contains
                        ims,ime, jms,jme, kms,kme,                    &
                        its,ite, jts,jte, kts,kte                     )
     endif
-!       WRITE(*,*) 'after add_emis_burn  at ktau= ',ktau
 
     !>-- compute dry deposition
     if (drydep_opt == 1) then
@@ -362,7 +359,6 @@ contains
     else
        ddvel_inout(:,:)=0.
     endif
-!    WRITE(*,*) 'dry depostion is done at ktau= ',ktau
 
 !>- large-scale wet deposition
     if (wetdep_ls_opt == 1) then
@@ -414,7 +410,6 @@ contains
     enddo
 !-------------------------------------
 !-- to output for diagnostics
-!    WRITE(*,*) 'rrfs nwfa/nifa 1 at ktau= ',ktau
     do i = 1, im
      emseas     (i) = emis_seas  (i,1,1,1)*1.e+9   ! size bin 1 sea salt emission: ug/m2/s
      emdust     (i) = emis_dust  (i,1,1,1)         ! size bin 1 dust emission    : ug/m2/s
@@ -429,7 +424,6 @@ contains
       fire_in(i,10) =  peak_hr(i,1)
     enddo
 
-!    WRITE(*,*) 'rrfs nwfa/nifa 2 at ktau= ',ktau
 !-- to provide real aerosol emission for Thompson MP
     if (imp_physics == imp_physics_thompson .and. aero_ind_fdb) then
       fact_wfa = 1.e-9*6.0/pi*exp(4.5*log(sigma1)**2)/mean_diameter1**3
@@ -455,12 +449,11 @@ contains
        enddo
       enddo
     endif
-!    WRITE(*,*) 'rrfs smoke wrapper is done at ktau= ',ktau
 
  end subroutine rrfs_smoke_wrapper_run
 
  subroutine rrfs_smoke_prep(                                            &
-        ktau,current_month,current_hour,gmt,                            &
+        current_month,current_hour,gmt,                                 &
         u10m,v10m,ustar,land,garea,rlat,rlon,ts2d,                      &
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,exch,w,            &
         nsoil,smc,vegtype,soiltyp,sigmaf,dswsfc,zorl,                   &
@@ -482,7 +475,7 @@ contains
         its,ite, jts,jte, kts,kte)
 
     !Chem input configuration
-    integer, intent(in) :: ktau, current_month, current_hour, hour_int
+    integer, intent(in) :: current_month, current_hour, hour_int
 
     !FV3 input variables
     integer, intent(in) :: nsoil
