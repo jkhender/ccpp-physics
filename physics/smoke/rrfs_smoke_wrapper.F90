@@ -251,15 +251,15 @@ contains
      IF (ktau==1) THEN
      do j=jts,jte
        do i=its,ite
-          if (xlong(i,j)<-130.) then
+          if (xlong(i,j)<230.) then
               peak_hr(i,j)= 0.0* 3600.    ! peak at 24 UTC, fires in Alaska
-          elseif(xlong(i,j)<-115.) then
+          elseif(xlong(i,j)<245.) then
               peak_hr(i,j)= 23.0* 3600.
-          elseif (xlong(i,j)<-100.) then
+          elseif (xlong(i,j)<260.) then
               peak_hr(i,j)= 22.0* 3600.    ! peak at 22 UTC, fires in the western US
-          elseif (xlong(i,j)<-85.) then
+          elseif (xlong(i,j)<275.) then
               peak_hr(i,j)= 21.0* 3600.
-          elseif (xlong(i,j)<-70.) then         ! peak at 20 UTC, fires in the eastern US
+          elseif (xlong(i,j)<290.) then         ! peak at 20 UTC, fires in the eastern US
               peak_hr(i,j)= 20.0* 3600.
           else
               peak_hr(i,j)= 19.0* 3600.
