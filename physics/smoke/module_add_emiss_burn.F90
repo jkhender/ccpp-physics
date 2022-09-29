@@ -180,7 +180,7 @@ CONTAINS
              !    WRITE(6,*) 'add_emiss_burn: timeq,peak_hr(i,j),fhist(i,j),r_q(i,j) ',timeq,peak_hr(i,j),fhist(i,j),r_q(i,j)
              !    WRITE(*,*) 'add_emiss_burn: rainc(i,j),rainnc(i,j) ', rainc(i,j),rainnc(i,j)
              !  endif
-               if ( k==kts .OR. k==kfire_max ) then
+               if ( dbg_opt .and. (k==kts .OR. k==kfire_max) ) then
                  WRITE(6,*) 'add_emiss_burn: i,j,k ',i,j,k
                  WRITE(6,*) 'add_emiss_burn: rho_phy(i,k,j),dz8w(i,k,j),conv ',rho_phy(i,k,j),dz8w(i,k,j),conv
                  WRITE(6,*) 'add_emiss_burn: ebu(i,k,j),dm_smoke ', ebu(i,k,j),dm_smoke
