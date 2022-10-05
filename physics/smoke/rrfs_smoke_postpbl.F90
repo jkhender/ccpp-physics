@@ -15,16 +15,11 @@
 
 contains
 
-!>\defgroup rrfs_smoke_postpbl GSD Chem emission driver Module  
-!> \ingroup gsd_chem_group
-!! This is the GSD Chem emission driver Module
-!! \section arg_table_rrfs_smoke_postpbl_run Argument Table
+!> \section arg_table_rrfs_smoke_postpbl_run Argument Table
 !! \htmlinclude rrfs_smoke_postpbl_run.html
 !!
-!>\section rrfs_smoke_postpbl GSD Chemistry Scheme General Algorithm
-!> @{
     subroutine rrfs_smoke_postpbl_run(ite, kte, ntsmoke, ntdust, ntrac,      &
-                   qgrs, chem3d, errmsg, errflg)
+                   qgrs, chem3d, rrfs_sd, errmsg, errflg)
 
     implicit none
 
@@ -35,6 +30,7 @@ contains
 
     real(kind_phys), dimension(:,:,:), intent(inout) :: qgrs
     real(kind_phys), dimension(:,:,:), intent(inout) :: chem3d
+    logical, intent(in) :: rrfs_sd
     character(len=*), intent(out) :: errmsg
     integer,          intent(out) :: errflg
 
@@ -43,6 +39,8 @@ contains
 
     errmsg = ''
     errflg = 0
+
+    if (.not. rrfs_sd) return
 
     !--- put smoke stuff back into tracer array
 
@@ -53,7 +51,8 @@ contains
      enddo
     enddo
 
- end subroutine rrfs_smoke_postpbl_run
+    return
 
-!> @}
+   end subroutine rrfs_smoke_postpbl_run
+
   end module rrfs_smoke_postpbl

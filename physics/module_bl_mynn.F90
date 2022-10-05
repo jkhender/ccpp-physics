@@ -395,9 +395,9 @@ CONTAINS
        &sh3d,sm3d,                      &
 
        &nchem,kdvel,ndvel,              & !Smoke/Chem variables
-       &chem3d, vdep,                   &
+       &chem3d,vdep,smoke_dbg,          &
        &frp,EMIS_ANT_NO,                & ! JLS/RAR to adjust exchange coeffs
-       &mix_chem,fire_turb,rrfs_smoke,  & ! end smoke/chem variables
+       &mix_chem,enh_mix,rrfs_sd,     & ! end smoke/chem variables
 
        &Tsq,Qsq,Cov,                    &
        &RUBLTEN,RVBLTEN,RTHBLTEN,       &
@@ -458,7 +458,7 @@ CONTAINS
     LOGICAL, INTENT(in) :: FLAG_QI,FLAG_QNI,FLAG_QC,FLAG_QNC,&
                            FLAG_QNWFA,FLAG_QNIFA,FLAG_OZONE
 
-    LOGICAL, INTENT(IN) :: mix_chem,fire_turb,rrfs_smoke
+    LOGICAL, INTENT(IN) :: mix_chem,enh_mix,rrfs_sd,smoke_dbg
 
     INTEGER, INTENT(in) :: &
          & IDS,IDE,JDS,JDE,KDS,KDE &
@@ -1052,9 +1052,9 @@ CONTAINS
           ENDDO ! end k
 
           !initialize smoke/chem arrays (if used):
-             IF  ( rrfs_smoke .and. mix_chem ) then
+             IF  ( mix_chem ) then
                 do ic = 1,ndvel
-                   vd1(ic) = vdep(i,ic) !is this correct????
+                   vd1(ic) = vdep(i,ic) ! dry deposition velocity
                    chem1(kts,ic) = chem3d(i,kts,ic)
                    s_awchem1(kts,ic)=0.
                 enddo
@@ -1066,7 +1066,7 @@ CONTAINS
                 enddo
              ELSE
                 do ic = 1,ndvel
-                   vd1(ic) = 0. !is this correct??? (ite) or (ndvel)
+                   vd1(ic) = 0. ! dry deposition velocity
                    chem1(kts,ic) = 0.
                    s_awchem1(kts,ic)=0.
                 enddo
@@ -1349,7 +1349,8 @@ CONTAINS
                &bl_mynn_mixscalars               )
 
 
-          IF ( rrfs_smoke .and. mix_chem ) THEN
+          IF ( mix_chem ) THEN
+            IF ( rrfs_sd ) THEN
              CALL mynn_mix_chem(kts,kte,i,       &
                   &delt, dz1, pblh(i),           &
                   &nchem, kdvel, ndvel,          &
@@ -1359,12 +1360,24 @@ CONTAINS
                   &dfh,                          &
                   &s_aw1,s_awchem1,              &
                   &emis_ant_no(i),               &
-                  &frp(i),                       &
-                  &fire_turb                     )
-
+                  &frp(i), rrfs_sd,              &
+                  &enh_mix, smoke_dbg            )
+            ELSE
+             CALL mynn_mix_chem(kts,kte,i,       &
+                  &delt, dz1, pblh(i),           &
+                  &nchem, kdvel, ndvel,          &
+                  &chem1, vd1,                   &
+                  &rho1,flt,                     &
+                  &tcd, qcd,                     &
+                  &dfh,                          &
+                  &s_aw1,s_awchem1,              &
+                  &zero,                         &
+                  &zero, rrfs_sd,                &
+                  &enh_mix, smoke_dbg            )
+            ENDIF
              DO ic = 1,nchem
                 DO k = kts,kte
-                   chem3d(i,k,ic) = chem1(k,ic)
+                   chem3d(i,k,ic) = max(1.e-12, chem1(k,ic))
                 ENDDO
              ENDDO
           ENDIF
@@ -5251,8 +5264,8 @@ ENDIF
        flt, tcd, qcd,                     &
        dfh,                               &
        s_aw, s_awchem,                    &
-       emis_ant_no,frp,                   &
-       fire_turb                          )
+       emis_ant_no, frp, rrfs_sd,         &
+       enh_mix, smoke_dbg                )
 
 !-------------------------------------------------------------------
     INTEGER, INTENT(in) :: kts,kte,i
@@ -5266,11 +5279,11 @@ ENDIF
     REAL, DIMENSION( kts:kte+1,nchem), INTENT(IN) :: s_awchem
     REAL, DIMENSION( ndvel ), INTENT(IN) :: vd1
     REAL, INTENT(IN) :: emis_ant_no,frp,pblh
-    LOGICAL, INTENT(IN) :: fire_turb
+    LOGICAL, INTENT(IN) :: rrfs_sd,enh_mix,smoke_dbg
 !local vars
 
     REAL, DIMENSION(kts:kte)     :: dtz
-    REAL, DIMENSION(1:kte-kts+1) :: a,b,c,d,x
+    REAL, DIMENSION(kts:kte) :: a,b,c,d,x
     REAL :: rhs,dztop
     REAL :: t,dzk
     REAL :: hght 
@@ -5282,8 +5295,8 @@ ENDIF
 
     REAL, DIMENSION(kts:kte) :: rhoinv
     REAL, DIMENSION(kts:kte+1) :: rhoz,khdz
-    REAL, PARAMETER :: no_threshold    = 0.1
-    REAL, PARAMETER :: frp_threshold   = 10.0     ! RAR 02/11/22: I increased the frp threshold to enhance mixing
+    REAL, PARAMETER :: NO_threshold    = 0.1      ! For anthropogenic sources
+    REAL, PARAMETER :: frp_threshold   = 10.0     ! RAR 02/11/22: I increased the frp threshold to enhance mixing over big fires
     REAL, PARAMETER :: pblh_threshold  = 250.0
 
     dztop=.5*(dz(kte)+dz(kte-1))
@@ -5314,18 +5327,19 @@ ENDIF
        khdz(k) = MAX(khdz(k), -0.5*(s_aw(k)-s_aw(k+1)))
     ENDDO
 
-    !Enhance diffusion over fires
-    IF ( fire_turb ) THEN
+    !Enhanced mixing over fires
+    IF ( rrfs_sd .and. enh_mix ) THEN
        DO k=kts+1,kte-1
           khdz_old  = khdz(k)
           khdz_back = pblh * 0.15 / dz(k)
           !Modify based on anthropogenic emissions of NO and FRP
           IF ( pblh < pblh_threshold ) THEN
-             IF ( emis_ant_no > no_threshold ) THEN
-                khdz(k) = MAX(1.1*khdz(k),sqrt((emis_ant_no / no_threshold)) / dz(k) * rhoz(k)) ! JLS 12/21/21
+             IF ( emis_ant_no > NO_threshold ) THEN
+                khdz(k) = MAX(1.1*khdz(k),sqrt((emis_ant_no / NO_threshold)) / dz(k) * rhoz(k)) ! JLS 12/21/21
 !                khdz(k) = MAX(khdz(k),khdz_back)
              ENDIF
              IF ( frp > frp_threshold ) THEN
+                kmaxfire = ceiling(log(frp))
                 khdz(k) = MAX(1.1*khdz(k), (1. - k/(kmaxfire*2.)) * ((log(frp))**2.- 2.*log(frp)) / dz(k)*rhoz(k)) ! JLS 12/21/21
 !                khdz(k) = MAX(khdz(k),khdz_back)
              ENDIF
@@ -5344,7 +5358,7 @@ ENDIF
        b(k)=1.+dtz(k)*(khdz(k+1)+khdz(k))*rhoinv(k) - 0.5*dtz(k)*rhoinv(k)*s_aw(k+1)
        c(k)=  -dtz(k)*khdz(k+1)*rhoinv(k)           - 0.5*dtz(k)*rhoinv(k)*s_aw(k+1)
        d(k)=chem1(k,ic) & !dtz(k)*flt  !neglecting surface sources 
-            & + dtz(k) * -vd1(ic)*chem1(1,ic) &
+            & - dtz(k)*vd1(ic)*chem1(k,ic) &
             & - dtz(k)*rhoinv(k)*s_awchem(k+1,ic)
 
        DO k=kts+1,kte-1
@@ -5361,11 +5375,14 @@ ENDIF
        c(kte)=0.
        d(kte)=chem1(kte,ic)
 
-       !CALL tridiag(kte,a,b,c,d)
        CALL tridiag3(kte,a,b,c,d,x)
 
+       IF ( smoke_dbg ) THEN
+            print*,'aerosol mixing ic,chem1,chem2(k,ic)',ic,(chem1(kts:kts+10,ic)),(x(kts:kts+10))
+            print*,'aerosol PBL mixing ic,vd1(ic)',ic,vd1(ic)
+       END IF
+
        DO k=kts,kte
-          !chem_new(k,ic)=d(k)
           chem1(k,ic)=x(k)
        ENDDO
     ENDDO
