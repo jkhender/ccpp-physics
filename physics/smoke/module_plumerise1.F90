@@ -37,7 +37,7 @@ CONTAINS
 subroutine ebu_driver (      flam_frac,ebb_smoke,ebu,           &
                              t_phy,q_vap,                            &   ! RAR: moist is replaced with q_vap
                              rho_phy,vvel,u_phy,v_phy,p_phy,         &
-                             z_at_w,z,ktau,g,con_cp,con_rd,          &   ! scale_fire_emiss is part of config_flags
+                             z_at_w,z,g,con_cp,con_rd,               &   ! scale_fire_emiss is part of config_flags
                              plume_frp, k_min, k_max,                &   ! RAR:
                              ids,ide, jds,jde, kds,kde,              &
                              ims,ime, jms,jme, kms,kme,              &
@@ -56,8 +56,7 @@ subroutine ebu_driver (      flam_frac,ebb_smoke,ebu,           &
 !   TYPE(grid_config_rec_type),  INTENT(IN )    :: config_flags
    character(*), intent(inout) :: errmsg
    integer, intent(inout) :: errflg
-   INTEGER,      INTENT(IN   ) :: ktau,                                    &
-                                  ids,ide, jds,jde, kds,kde,               &
+   INTEGER,      INTENT(IN   ) :: ids,ide, jds,jde, kds,kde,               &
                                   ims,ime, jms,jme, kms,kme,               &
                                   its,ite, jts,jte, kts,kte
 !   real(kind=kind_phys), DIMENSION( ims:ime, kms:kme, jms:jme, num_moist ),                &
@@ -112,7 +111,7 @@ subroutine ebu_driver (      flam_frac,ebb_smoke,ebu,           &
         cpor    =con_cp/con_rd
         con_rocp=con_rd/con_cp
 
-        IF ( dbg_opt .and. ktau<2000) then
+        IF ( dbg_opt ) then
            WRITE(*,*) 'module_plumerise1: its,ite,jts,jte ', its,ite,jts,jte
            WRITE(*,*) 'module_plumerise1: ims,ime,jms,jme ', ims,ime,jms,jme
           !WRITE(*,*) 'module_plumerise1: p_ebu_smoke,num_ebu: ', p_ebu_smoke,num_ebu
@@ -133,7 +132,6 @@ subroutine ebu_driver (      flam_frac,ebb_smoke,ebu,           &
 
 ! For now the flammable fraction is constant, based on the namelist. The next
 ! step to use LU index and meteorology to parameterize it
-!    IF (ktau==2) THEN
        do j=jts,jte
         do i=its,ite
            flam_frac(i,j)= 0.
@@ -142,7 +140,6 @@ subroutine ebu_driver (      flam_frac,ebb_smoke,ebu,           &
            end if
         enddo
        enddo
- !   ENDIF
 
 
 ! RAR: new FRP based approach
@@ -172,7 +169,7 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                  !theta_in(k)= t_phy(i,k,j)/pi_in(k)*cp
                enddo
 
-             IF (dbg_opt .and. ktau<2000) then
+             IF (dbg_opt) then
                WRITE(*,*) 'module_plumerise1: i,j ',i,j
                WRITE(*,*) 'module_plumerise1: plume_frp(i,j,:) ',plume_frp(i,j,:)
                WRITE(*,*) 'module_plumerise1: ebu(i,kts,j) ',ebu(i,kts,j)
@@ -188,9 +185,9 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                               u_in, v_in, w_in, theta_in ,pi_in,    &
                               rho_phyin, qv_in, zmid, z_lev,        &
                               plume_frp(i,j,1), k_min(i,j),         & 
-                              k_max(i,j), ktau, dbg_opt, g, con_cp, &
+                              k_max(i,j), dbg_opt, g, con_cp,       &
                               con_rd, cpor, errmsg, errflg )
-                             !k_max(i,j), ktau, config_flags%debug_chem )
+                             !k_max(i,j), config_flags%debug_chem )
                if(errflg/=0) return
 
                kp1= k_min(i,j)
@@ -202,7 +199,7 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                   enddo
                   ebu(i,kts,j)=   (1.-flam_frac(i,j))* ebb_smoke(i,j)
 
-               IF ( dbg_opt .and. ktau<2000) then
+               IF ( dbg_opt ) then
                    WRITE(*,*) 'module_plumerise1: i,j ',i,j
                    WRITE(*,*) 'module_plumerise1: k_min(i,j), k_max(i,j) ',k_min(i,j), k_max(i,j)  
                END IF

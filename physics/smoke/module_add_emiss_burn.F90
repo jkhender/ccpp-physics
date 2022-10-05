@@ -6,7 +6,7 @@ module module_add_emiss_burn
   use machine ,        only : kind_phys
   use rrfs_smoke_config
 CONTAINS
-  subroutine add_emis_burn(dtstep,ktau,dz8w,rho_phy,rel_hum,         &
+  subroutine add_emis_burn(dtstep,dz8w,rho_phy,rel_hum,              &
                            chem,julday,gmt,xlat,xlong,               &
                            !luf_igbp,lu_fire1,                       &
                            vegtype,vfrac,peak_hr,                    &
@@ -24,7 +24,7 @@ CONTAINS
 
 !   TYPE(grid_config_rec_type),  INTENT(IN   )    :: config_flags
 
-   INTEGER,      INTENT(IN   ) :: ktau, julday,        &
+   INTEGER,      INTENT(IN   ) :: julday,                         &
                                   ids,ide, jds,jde, kds,kde,      &
                                   ims,ime, jms,jme, kms,kme,               &
                                   its,ite, jts,jte, kts,kte
@@ -172,21 +172,19 @@ CONTAINS
               chem(i,k,j,p_smoke) = chem(i,k,j,p_smoke) + dm_smoke
               chem(i,k,j,p_smoke) = MIN(chem(i,k,j,p_smoke),5.e+3)
 
-             if (ktau<1000 .and. dbg_opt) then
              !  if ( k==kts ) then
-             !    WRITE(6,*) 'add_emiss_burn: ktau,gmt,dtstep,time_int ',ktau,gmt,dtstep,time_int
+             !    WRITE(6,*) 'add_emiss_burn: gmt,dtstep,time_int ',gmt,dtstep,time_int
              !    WRITE(*,*) 'add_emiss_burn: i,j,xlat(i,j),xlong(i,j) ',i,j,xlat(i,j),xlong(i,j)
                  !WRITE(*,*) 'add_emiss_burn: luf_igbp(i,:,j) ',luf_igbp(i,:,j)
                  !WRITE(*,*) 'add_emiss_burn: lu_fire1(i,j) ',lu_fire1(i,j)
              !    WRITE(6,*) 'add_emiss_burn: timeq,peak_hr(i,j),fhist(i,j),r_q(i,j) ',timeq,peak_hr(i,j),fhist(i,j),r_q(i,j)
              !    WRITE(*,*) 'add_emiss_burn: rainc(i,j),rainnc(i,j) ', rainc(i,j),rainnc(i,j)
              !  endif
-               if ( k==kts .OR. k==kfire_max ) then
+               if ( dbg_opt .and. (k==kts .OR. k==kfire_max) ) then
                  WRITE(6,*) 'add_emiss_burn: i,j,k ',i,j,k
                  WRITE(6,*) 'add_emiss_burn: rho_phy(i,k,j),dz8w(i,k,j),conv ',rho_phy(i,k,j),dz8w(i,k,j),conv
                  WRITE(6,*) 'add_emiss_burn: ebu(i,k,j),dm_smoke ', ebu(i,k,j),dm_smoke
                endif
-             endif
 
               enddo
             enddo
@@ -208,7 +206,7 @@ CONTAINS
            enddo
           enddo
 
-     IF ( ktau<2000 .and. dbg_opt ) then
+     IF ( dbg_opt ) then
          WRITE(*,*) 'add_emis_burn: i,j,k,ext2 ',i,j,k,ext2
          WRITE(*,*) 'add_emis_burn: rel_hum(its,kts,jts),rel_hum(ite,kfire_max,jte) ',rel_hum(its,kts,jts),rel_hum(ite,kfire_max,jte)
          WRITE(*,*) 'add_emis_burn: ext3d_smoke(its,kts,jts),ext3d_smoke(ite,kfire_max,jte) ',ext3d_smoke(its,kts,jts),ext3d_smoke(ite,kfire_max,jte)

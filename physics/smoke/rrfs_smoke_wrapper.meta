@@ -614,10 +614,10 @@
   kind = kind_phys
   intent = in
 [fire_in]
-  standard_name = smoke_fire_auxeliary_input
-  long_name = smoke fire auxeliary input variables
+  standard_name = smoke_fire_auxiliary_input
+  long_name = smoke fire auxiliary input variables
   units = various
-  dimensions = (horizontal_loop_extent,10)
+  dimensions = (horizontal_loop_extent,fire_auxiliary_data_extent)
   type = real
   kind = kind_phys
   intent = inout
