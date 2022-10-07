@@ -25,6 +25,15 @@ MODULE module_sf_ruclsm
       real (kind=kind_phys), parameter :: rhowater= 1000.
       real (kind=kind_phys), parameter :: piconst = 3.1415926535897931
       real (kind=kind_phys), parameter :: r_v     = 4.6150e+2
+
+      !-- options for snow conductivity: 1 - constant, 2 - Sturm et al.,1997
+      integer, parameter :: isncond_opt = 2
+
+      !-- Snow fraction options
+      !-- option 1: original formulation using critical snow depth to compute snow fraction
+      !-- option 2: the tanh formulation from Niu,G.-Y.,and Yang,Z.-L., 2007,JGR,DOI:10.1029/2007JD008674.
+      integer, parameter :: isncovr_opt = 1
+
 !! @}
 
 !> VEGETATION PARAMETERS
@@ -1035,8 +1044,8 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
         !SFCRUNOFF(I,J) = SFCRUNOFF(I,J)+RUNOFF1(I,J)*DT*1000.0
         !UDRUNOFF (I,J) = UDRUNOFF(I,J)+RUNOFF2(I,J)*DT*1000.0
         !ACRUNOFF (I,J) = ACRUNOFF(i,j)+UDRUNOFF(I,J)+RUNOFF2(I,J)*DT*1000.0
-        !ACRUNOFF(I,J)  = (RUNOFF1(I,J)+RUNOFF2(I,J))*DT*1000.0
-        ACRUNOFF(I,J)  = ACRUNOFF(i,j)+RUNOFF1(I,J)*DT*1000.0 ! acc surface runoff
+        ACRUNOFF(I,J)  = (RUNOFF1(I,J)+RUNOFF2(I,J))*DT*1000.0
+        !ACRUNOFF(I,J)  = ACRUNOFF(i,j)+RUNOFF1(I,J)*DT*1000.0 ! acc surface runoff
         SMAVAIL  (I,J) = SMAVAIL(I,J) * 1000. ! mm
         SMMAX    (I,J) = SMMAX(I,J) * 1000.
         smtotold (I,J) = smtotold(I,J) * 1000. ! mm
@@ -1417,8 +1426,6 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
 
    INTEGER ::  K,ILNB
 
-   integer ::  isncovr_opt
-
    REAL    ::  BSN, XSN                                        , &
                RAINF, SNTH, NEWSN, PRCPMS, NEWSNMS             , &
                T3, UPFLUX, XINET
@@ -1444,7 +1451,7 @@ print * ,'Soil moisture is below wilting in mixed grassland/cropland category at
      !-- option 1: original formulation using critical snow depth to compute
      !-- snow fraction
      !-- option 2: the tanh formulation from Niu,G.-Y.,and Yang,Z.-L. 2007,JGR,DOI:10.1029/2007JD008674.
-        isncovr_opt = 1
+     !isncovr_opt = 1
      !--
      !-- SNHEI_CRIT is a threshold for fractional snow in isncovr_opt=1
          snhei_crit=0.01601*1.e3/rhosn
@@ -4018,7 +4025,7 @@ print *, 'TSO before calling SNOWTEMP: ', tso
    REAL,     DIMENSION(1:NZS)  ::  cotso,rhtso
 
    REAL                   :: RNET,rsmfrac,soiltfrac,hsn,icemelt,rr
-   integer                ::      nmelt, isncond_opt
+   integer                ::      nmelt
 
    REAL                   :: keff
 
@@ -4031,7 +4038,7 @@ print *, 'TSO before calling SNOWTEMP: ', tso
         !-- options for snow conductivity:
         !-- 1 - constant
         !-- opt 2 -  Sturm et al., 1997
-        isncond_opt = 1
+        !isncond_opt = 2
         keff = 0.265
 
 !--- SNOW flag -- ISICE
@@ -5177,7 +5184,7 @@ endif ! 1==2
                                                             hfx
 
    REAL                        :: RNET,rsmfrac,soiltfrac,hsn,rr,keff
-   integer                     :: nmelt, iter, isncond_opt
+   integer                     :: nmelt, iter
 
 !-----------------------------------------------------------------
 
@@ -5186,7 +5193,7 @@ endif ! 1==2
        !-- options for snow conductivity:
        !-- 1 - constant
        !-- opt 2 -  Sturm et al., 1997
-       isncond_opt = 1
+       !isncond_opt = 1
        keff = 0.265
 
        do k=1,nzs

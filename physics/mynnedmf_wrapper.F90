@@ -83,12 +83,6 @@
             return
          end if
 
-        if (lheatstrg) then
-          errmsg = 'Logic error: lheatstrg not implemented for MYNN PBL'
-          errflg = 1
-          return
-        end if
-
       end subroutine mynnedmf_wrapper_init
 
       subroutine mynnedmf_wrapper_finalize ()
@@ -169,7 +163,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
 ! should be moved to inside the mynn:
      use machine,        only: kind_phys
      use bl_mynn_common, only: cp, r_d, grav, g_inv, zero, &
-         xlv, xlvcp, xlscp
+         xlv, xlvcp, xlscp, p608
      use module_bl_mynn, only: mynn_bl_driver
 
 !------------------------------------------------------------------- 
@@ -211,7 +205,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
      &       imp_physics_thompson, imp_physics_gfdl,        &
      &       imp_physics_nssl,                              &
      &       spp_pbl
-      real, intent(in) ::                                   &
+      real(kind=kind_phys), intent(in) ::                   &
      &       bl_mynn_closure
 
 !TENDENCY DIAGNOSTICS
@@ -279,7 +273,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
       real(kind=kind_phys), dimension(:), intent(in) :: xmu
       real(kind=kind_phys), dimension(:,:), intent(in) :: htrsw, htrlw
       ! spp_wts_pbl only allocated if spp_pbl == 1
-      real(kind_phys), dimension(:,:),       intent(in) :: spp_wts_pbl
+      real(kind=kind_phys), dimension(:,:),       intent(in) :: spp_wts_pbl
 
      !LOCAL
       real(kind=kind_phys), dimension(im,levs) ::                        &
@@ -291,7 +285,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
       real(kind=kind_phys), allocatable :: old_ozone(:,:)
 
 !smoke/chem arrays
-      real(kind_phys), dimension(:), intent(inout) :: frp
+      real(kind=kind_phys), dimension(:), intent(inout) :: frp
       logical, intent(in) :: mix_chem, enh_mix, rrfs_sd
       real(kind=kind_phys), dimension(:,:,:), intent(inout) :: chem3d
       real(kind=kind_phys), dimension(:,:  ), intent(inout) :: vdep
@@ -572,11 +566,7 @@ SUBROUTINE mynnedmf_wrapper_run(        &
           do i=1,im
           !   dz(i,k)=(phii(i,k+1) - phii(i,k))*g_inv
              th(i,k)=t3d(i,k)/exner(i,k)
-          ! keep as specific humidity
-          !   qv(i,k)=qvsh(i,k)/(1.0 - qvsh(i,k))
-          !   qc(i,k)=qc(i,k)/(1.0 - qvsh(i,k))
-          !   qi(i,k)=qi(i,k)/(1.0 - qvsh(i,k))
-             rho(i,k)=prsl(i,k)/(r_d*t3d(i,k))
+             rho(i,k)=prsl(i,k)/(r_d*t3d(i,k)*(1.+p608*max(sqv(i,k),1e-8)))
              w(i,k) = -omega(i,k)/(rho(i,k)*grav)
          enddo
       enddo
@@ -594,6 +584,11 @@ SUBROUTINE mynnedmf_wrapper_run(        &
          ch(i)=0.0
          hfx(i)=hflx(i)*rho(i,1)*cp
          qfx(i)=qflx(i)*rho(i,1)
+         !filter bad incoming fluxes
+         if (hfx(i) > 1200.)hfx(i) = 1200.
+         if (hfx(i) < -500.)hfx(i) = -500.
+         if (qfx(i) > .0005)qfx(i) = 0.0005
+         if (qfx(i) < -.0002)qfx(i) = -0.0002
 
          dtsfc1(i) = hfx(i)
          dqsfc1(i) = qfx(i)*XLV
@@ -1037,9 +1032,9 @@ SUBROUTINE mynnedmf_wrapper_run(        &
 
     implicit none
     integer,  intent(in)     :: kte
-    real, intent(in)         :: delt
-    real, dimension(kte), intent(in)     :: dp, exner
-    real, dimension(kte), intent(inout)  :: qv, qc, qi, th
+    real(kind=kind_phys), intent(in)     :: delt
+    real(kind=kind_phys), dimension(kte), intent(in)     :: dp, exner
+    real(kind=kind_phys), dimension(kte), intent(inout)  :: qv, qc, qi, th
     integer   k
     real ::  dqc2, dqi2, dqv2, sum, aa, dum
     real, parameter :: qvmin1= 1e-8,    & !min at k=1

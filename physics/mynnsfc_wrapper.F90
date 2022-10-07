@@ -304,6 +304,7 @@ SUBROUTINE mynnsfc_wrapper_run(            &
              z0pert=z0pert,ztpert=ztpert,                                     & !intent(in)
              redrag=redrag,sfc_z0_type=sfc_z0_type,                           & !intent(in)
              itimestep=itimestep,iter=iter,flag_iter=flag_iter,               &
+             flag_restart=flag_restart,                                       & 
                          wet=wet,              dry=dry,              icy=icy, &  !intent(in)
              tskin_wat=tskin_wat,  tskin_lnd=tskin_lnd,  tskin_ice=tskin_ice, &  !intent(in)
              tsurf_wat=tsurf_wat,  tsurf_lnd=tsurf_lnd,  tsurf_ice=tsurf_ice, &  !intent(in)
