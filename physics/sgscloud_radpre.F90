@@ -124,7 +124,8 @@
       real :: rhgrid,h2oliq,qsat,tem1,tem2,clwt,es,onemrh,value
 
       !Chaboureau and Bechtold (2002 and 2005)
-      real :: a, f, sigq, qmq, qt, xl, tlk, th, thl, rsl, cpm, cb_cf
+      real :: a, f, sigq, qmq, qt, xl, th, thl, rsl, cpm, cb_cf
+      real(kind=kind_phys) :: tlk
 
       !Option to convective cloud fraction
       integer, parameter :: conv_cf_opt = 0  !0: C-B, 1: X-R
@@ -200,7 +201,7 @@
               !endif
 
               if (qc(i,k) < 1.e-6 .and. cldfra_bl(i,k)>0.001) then
-                qc(i,k) = qc_bl(i,k)*cldfra_bl(i,k)
+                qc(i,k) = qc_bl(i,k)
 
                 !eff radius cloud water (microns) from Miles et al. (2007)
                 if (nint(slmsk(i)) == 1) then !land
@@ -219,7 +220,7 @@
               snow_frac = min(0.5, max((p3d(i,k)-30000.0),0.0)/140000.0)
               ice_frac  = 1.0 - snow_frac
               if (qi(i,k) < 1.e-8 .and. cldfra_bl(i,k)>0.001) then
-                qi(i,k) = ice_frac*qi_bl(i,k)*cldfra_bl(i,k)
+                qi(i,k) = ice_frac*qi_bl(i,k)
 
                 !eff radius cloud ice (microns), from Mishra et al. (2014, JGR Atmos, fig 6b)
                 if(qi(i,k)>1.E-8)clouds5(i,k)=max(173.45 + 2.14*Tc, 20.)
@@ -232,7 +233,7 @@
               endif
 
               if (qs(i,k) < 1.e-8 .and. cldfra_bl(i,k)>0.001) then
-                qs(i,k) = snow_frac*qi_bl(i,k)*cldfra_bl(i,k)
+                qs(i,k) = snow_frac*qi_bl(i,k)
 
                 !eff radius cloud ice (microns), from Mishra et al. (2014, JGR Atmos, fig 6b)
                 if(qs(i,k)>1.E-8)clouds9(i,k)=max(2.*(173.45 + 2.14*Tc), 50.)
@@ -289,10 +290,11 @@
 
                 !Partition the convective clouds into water & frozen species
                 liqfrac = min(1., max(0., (Tk-244.)/29.))
-                qc(i,k) = qc(i,k)+qci_conv(i,k)*liqfrac
+                !For now, GF mixing ratios are added elsewhere.
+                !qc(i,k) = qc(i,k)+qci_conv(i,k)*liqfrac
                 !split ice & snow 50-50%
-                qi(i,k) = qi(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
-                qs(i,k) = qs(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
+                !qi(i,k) = qi(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
+                !qs(i,k) = qs(i,k)+0.5*qci_conv(i,k)*(1. - liqfrac)
 
                 !eff radius cloud water (microns)
                 if (nint(slmsk(i)) == 1) then !land
@@ -333,10 +335,15 @@
                    sigq = SQRT(sigq**2 + 1e-10)   ! combined conv + background components
                    qmq  = a * (qt - qsat)         ! saturation deficit/excess;
                                                   !   the numerator of Q1
-                   cb_cf= min(max(0.5 + 0.36 * atan(1.55*(qmq/sigq)),0.01),0.99)
+                   cb_cf= min(max(0.5 + 0.36 * atan(1.55*(qmq/sigq)),0.0),0.99)
+                   if (qci_conv(i,k) .lt. 1e-9) cb_cf = 0.0
                    if (do_mynnedmf .and. qmq .ge. 0.0) then
                       ! leverage C-B stratus clouds from MYNN in saturated conditions
-                      clouds1(i,k) = 0.5*(clouds1(i,k) + cb_cf)
+                      if (cb_cf .gt. 0.0) then
+                         clouds1(i,k) = 0.5*(clouds1(i,k) + cb_cf)
+                      else
+                         !default to MYNN clouds - already specified
+                      endif
                    else                           ! unsaturated
                       clouds1(i,k) = cb_cf
                    endif

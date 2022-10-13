@@ -453,7 +453,7 @@ module lsm_ruc
 
 !  ---  locals:
       real (kind=kind_phys), dimension(im) :: rho,                      &
-     &       q0, qs1, albbcksol,                                        &
+     &       q0, qs1, albbcksol, srunoff_old, runoff_old,               &
      &       tprcp_old, srflag_old, sr_old, canopy_old, wetness_old,    &
      ! for land
      &       weasd_lnd_old, snwdph_lnd_old, tskin_lnd_old,              &
@@ -684,6 +684,8 @@ module lsm_ruc
           snowmt_lnd_old(i)      = snowmt_lnd(i)
           acsnow_lnd_old(i)      = acsnow_lnd(i)
           snowfallac_lnd_old(i)  = snowfallac_lnd(i)
+          srunoff_old(i)         = srunoff(i)
+          runoff_old(i)          = runoff(i)
           ! for ice
           weasd_ice_old(i)       = weasd_ice(i)
           snwdph_ice_old(i)      = snwdph_ice(i)
@@ -747,18 +749,20 @@ module lsm_ruc
           acceta(i,j)       = 0.0
           ssoil_lnd(i,j)    = 0.0
           ssoil_ice(i,j)    = 0.0
-          snomlt_lnd(i,j)   = 0.0
-          snomlt_ice(i,j)   = 0.0
           infiltr(i,j)      = 0.0
-          runoff1(i,j)      = 0.0
-          runoff2(i,j)      = 0.0
-          acrunoff(i,j)     = 0.0
-          snfallac_lnd(i,j) = 0.0
-          acsn_lnd(i,j)     = 0.0
-          snfallac_ice(i,j) = 0.0
-          acsn_ice(i,j)     = 0.0
           precipfr(i,j)     = 0.0
           rhosnfr(i,j)      = -1.e3
+          runoff1(i,j)      = 0.0
+          runoff2(i,j)      = 0.0
+          if(kdt == 1) then
+            acrunoff(i,j)     = 0.0
+            snfallac_lnd(i,j) = 0.0
+            acsn_lnd(i,j)     = 0.0
+            snfallac_ice(i,j) = 0.0
+            acsn_ice(i,j)     = 0.0
+            snomlt_lnd(i,j)   = 0.0
+            snomlt_ice(i,j)   = 0.0
+          endif
         endif
       enddo ! i=1,im
       enddo
@@ -1041,11 +1045,7 @@ module lsm_ruc
         sneqv_lnd(i,j) = weasd_lnd(i)
         snowh_lnd(i,j) = snwdph_lnd(i) * 0.001 ! convert from mm to m
 
-        if(kdt == 1) then
-          snfallac_lnd(i,j) = 0.
-          acsn_lnd(i,j)     = 0.
-          snomlt_lnd(i,j)   = 0.
-        else
+        if(kdt > 1) then
         !-- run-total accumulation
           snfallac_lnd(i,j) = snowfallac_lnd(i)
           acsn_lnd(i,j)     = acsnow_lnd(i)
@@ -1294,7 +1294,8 @@ module lsm_ruc
 
         ! --- ... accumulated total runoff and surface runoff
         runoff(i)  = runoff(i)  + (drain(i)+runof(i)) * delt  ! accum total kg m-2
-        srunoff(i) = srunoff(i) + runof(i) * delt             ! accum surface kg m-2
+        !srunoff(i) = srunoff(i) + runof(i) * delt             ! accum surface kg m-2
+        srunoff(i) = acrunoff(i,j)        ! accum surface kg m-2
 
         ! --- ... accumulated frozen precipitation (accumulation in lsmruc)
         snowfallac_lnd(i) = snfallac_lnd(i,j) ! accum kg m-2
@@ -1403,11 +1404,7 @@ module lsm_ruc
 
         snowh_ice(i,j) = snwdph_ice(i) * 0.001         ! convert from mm to m
         sneqv_ice(i,j) = weasd_ice(i)                  ! [mm]
-        if(kdt == 1) then
-          snfallac_ice(i,j) = 0.
-          acsn_ice(i,j)     = 0.
-          snomlt_ice(i,j)   = 0.
-        else
+        if(kdt > 1) then
           snfallac_ice(i,j) = snowfallac_ice(i)
           acsn_ice(i,j)     = acsnow_ice(i)
           snomlt_ice(i,j)   = snowmt_ice(i)
@@ -1430,6 +1427,9 @@ module lsm_ruc
 
         z0_ice(i,j)  = z0rl_ice(i)/100.
         znt_ice(i,j) = z0rl_ice(i)/100.
+
+        runoff1(i,j) = 0.
+        runoff2(i,j) = 0.
 
         ! Workaround needed for subnormal numbers.  This should be
         ! done after all other sanity checks, in case a sanity check
@@ -1574,6 +1574,8 @@ module lsm_ruc
             z0rl_ice(i)        = z0rl_ice_old(i)
             sncovr1_ice(i)     = sncovr1_ice_old(i)
             snowmt_ice(i)      = snowmt_ice_old(i)
+            srunoff(i)         = srunoff_old(i)
+            runoff(i)          = runoff_old(i)
 
             do k = 1, lsoil_ruc
               smois(i,k)    = smois_old(i,k)
