@@ -92,8 +92,8 @@
       real(kind=kind_phys), dimension(:,:), intent(inout) :: qr, qs, qg
       ! qci_conv only allocated if GF is used
       real(kind=kind_phys), dimension(:,:), intent(inout) :: qci_conv
-      real(kind=kind_phys), dimension(:,:), intent(in)    ::ud_mf
-      real(kind=kind_phys), dimension(:,:), intent(in)    ::ud_mf_timeave, qci_conv_timeave
+      real(kind=kind_phys), dimension(:,:), intent(in)    :: ud_mf
+      real(kind=kind_phys), dimension(:,:), intent(in)    :: ud_mf_timeave, qci_conv_timeave
       real(kind=kind_phys), dimension(:,:), intent(in)    :: T3D,delp
       real(kind=kind_phys), dimension(:,:), intent(in)    :: qv,P3D,exner
       real(kind=kind_phys), dimension(:,:), intent(inout) ::  &
