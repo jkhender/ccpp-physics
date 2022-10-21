@@ -344,6 +344,13 @@
   type = real
   kind = kind_phys
   intent = in
+[gf_aeroic]
+  standard_name = control_for_gf_aerosol_initial_conditions
+  long_name = flag for initial conditions used in aerosol-aware GF
+  units = flag
+  dimensions = ()
+  type = integer
+  intent = in
 [aerodp]
   standard_name = atmosphere_optical_thickness_due_to_ambient_aerosol_particles
   long_name = vertical integrated optical depth for various aerosol species
@@ -364,7 +371,7 @@
   standard_name = assimilated_aod_input
   long_name = assimilated aod input
   units = none
-  dimensions = (horizontal_loop_extent,1)
+  dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
   intent = in

@@ -1,4 +1,3 @@
-!>\file cu_gf_driver.F90
 !! This file is scale-aware Grell-Freitas cumulus scheme driver.
 
 
@@ -61,8 +60,8 @@ contains
       subroutine cu_gf_driver_run(ntracer,garea,im,km,kdt,dt,flag_init,flag_restart,&
                cactiv,cactiv_m,g,cp,xlv,r_v,forcet,forceqv_spechum,phil,raincv, &
                qv_spechum,t,cld1d,us,vs,t2di,w,qv2di_spechum,p2di,psuri,        &
-               hbot,htop,kcnv,xland,hfx2,qfx2,aerodp,aod_gf,aod_da,cliw,clcw,   &
-               pbl,ud_mf,dd_mf,dt_mf,cnvw_moist,cnvc,imfshalcnv,                &
+               hbot,htop,kcnv,xland,hfx2,qfx2,gf_aeroic,aerodp,aod_gf,aod_da,   &
+               cliw,clcw,pbl,ud_mf,dd_mf,dt_mf,cnvw_moist,cnvc,imfshalcnv,      &
                flag_for_scnv_generic_tend,flag_for_dcnv_generic_tend,           &
                dtend,dtidx,ntqv,ntiw,ntcw,index_of_temperature,index_of_x_wind, &
                index_of_y_wind,index_of_process_scnv,index_of_process_dcnv,     &
@@ -93,7 +92,7 @@ contains
       integer            :: ishallow_g3 ! depend on imfshalcnv
 !-------------------------------------------------------------
    integer      :: its,ite, jts,jte, kts,kte
-   integer, intent(in   ) :: im,km,ntracer
+   integer, intent(in   ) :: im,km,ntracer,gf_aeroic
    logical, intent(in   ) :: flag_init, flag_restart
    logical, intent(in   ) :: flag_for_scnv_generic_tend,flag_for_dcnv_generic_tend
    real (kind=kind_phys), intent(in) :: g,cp,xlv,r_v
@@ -142,7 +141,7 @@ contains
    real(kind=kind_phys), dimension (:,:), intent(inout) :: qv_spechum
    real(kind=kind_phys), dimension (:,:), intent(in) :: aerodp
    real(kind=kind_phys), dimension (:), intent(inout) :: aod_gf
-   real(kind=kind_phys), dimension (:,:), intent(in) :: aod_da
+   real(kind=kind_phys), dimension (:), intent(in) :: aod_da
 !$acc declare copyin(qv2di_spechum) copy(qv_spechum,aod_gf)
    ! Local water vapor mixing ratios and cloud water mixing ratios
    real(kind=kind_phys), dimension (im,km) :: qv2di, qv, forceqv, cnvw
@@ -386,6 +385,8 @@ contains
        ud_mf_timeave(:,:)=0.
        qci_conv_accum(:,:)=0.
        qci_conv_timeave(:,:)=0.
+       cactiv(:)=0
+       cactiv_m(:)=0
      endif
 
 !$acc end kernels
@@ -422,23 +423,36 @@ contains
       ccn_m(i) = 0.
 
       ! set aod and ccn
-      if (flag_init .and. .not.flag_restart) then
-        !aod_gf(i)=aerodp(i,1)
-        aod_gf(i)=aod_da(i,1)
-      else
-        if (imid_gf .eq. 0) then
-          if((cactiv(i).eq.0) .and. (cactiv_m(i).eq.0))then
-            !if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
-            !if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
-            if(aod_da(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aod_da(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
-            if(aod_gf(i)>aod_da(i,1)) aod_gf(i)=aod_da(i,1)
-          endif
+      if (gf_aeroic .eq. 1) then
+        if (flag_init .and. .not.flag_restart) then
+          aod_gf(i)=aerodp(i,1)
         else
-          if(cactiv(i).eq.0)then
-            !if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
-            !if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
-            if(aod_da(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aod_da(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
-            if(aod_gf(i)>aod_da(i,1)) aod_gf(i)=aod_da(i,1)
+          if (imid_gf .eq. 1) then
+            if((cactiv(i).eq.0) .and. (cactiv_m(i).eq.0))then
+              if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+              if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+            endif
+          else
+            if(cactiv(i).eq.0)then
+              if(aerodp(i,1)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aerodp(i,1)-aod_gf(i))*(dt/(aodreturn*60)))
+              if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+            endif
+          endif
+        endif
+      elseif (gf_aeroic .eq. 2) then 
+        if (flag_init .and. .not.flag_restart) then
+          aod_gf(i)=aod_da(i)
+        else
+          if (imid_gf .eq. 1) then
+            if((cactiv(i).eq.0) .and. (cactiv_m(i).eq.0))then
+              if(aod_da(i)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aod_da(i)-aod_gf(i))*(dt/(aodreturn*60)))
+              if(aod_gf(i)>aod_da(i)) aod_gf(i)=aod_da(i)
+            endif
+          else
+            if(cactiv(i).eq.0)then
+              if(aod_da(i)>aod_gf(i)) aod_gf(i)=aod_gf(i)+((aod_da(i)-aod_gf(i))*(dt/(aodreturn*60)))
+              if(aod_gf(i)>aod_da(i)) aod_gf(i)=aod_da(i)
+            endif
           endif
         endif
       endif
@@ -1040,12 +1054,13 @@ contains
 
               ! Convert ccn back to aod
               aod_gf(i)=0.0027*(ccn_gf(i)**0.64)
-              if(aod_gf(i)<0.007)then
-                aod_gf(i)=0.007
-              !elseif(aod_gf(i)>aerodp(i,1))then
-              !  aod_gf(i)=aerodp(i,1)
-              elseif(aod_gf(i)>aod_da(i,1))then
-                aod_gf(i)=aod_da(i,1)
+
+              if(aod_gf(i)<0.007) aod_gf(i)=0.007
+
+              if (gf_aeroic .eq. 1) then
+                if(aod_gf(i)>aerodp(i,1)) aod_gf(i)=aerodp(i,1)
+              elseif (gf_aeroic .eq. 2) then
+                if(aod_gf(i)>aod_da(i)) aod_gf(i)=aod_da(i)
               endif
             enddo
 !$acc end kernels
