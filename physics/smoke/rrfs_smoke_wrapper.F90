@@ -691,12 +691,12 @@ contains
       emis_anoc(i) = emi_in(i,1)
     enddo
 
-    if (hour_int<=24) then
+    if (hour_int<24) then
         do j=jts,jte
          do i=its,ite
-          ebb_smoke_hr(i)  = smoke_RRFS(i,int(gmt)+1,1) ! smoke
-          frp_hr      (i)  = smoke_RRFS(i,int(gmt)+1,2) ! frp
-          frp_std_hr  (i)  = smoke_RRFS(i,int(gmt)+1,3) ! std frp
+          ebb_smoke_hr(i)  = smoke_RRFS(i,hour_int+1,1) ! smoke
+          frp_hr      (i)  = smoke_RRFS(i,hour_int+1,2) ! frp
+          frp_std_hr  (i)  = smoke_RRFS(i,hour_int+1,3) ! std frp
           ebu_in    (i,j)  = ebb_smoke_hr(i)
           plume_frp(i,j,p_frp_hr     ) = conv_frp* frp_hr  (i)
           plume_frp(i,j,p_frp_std    ) = conv_frp* frp_std_hr  (i)

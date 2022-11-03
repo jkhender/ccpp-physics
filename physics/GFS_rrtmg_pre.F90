@@ -19,7 +19,7 @@
       subroutine GFS_rrtmg_pre_run (im, levs, lm, lmk, lmp, n_var_lndp,        &
         imfdeepcnv, imfdeepcnv_gf, me, ncnd, ntrac, num_p3d, npdf3d, ncnvcld3d,&
         ntqv, ntcw,ntiw, ntlnc, ntinc, ntrnc, ntsnc, ntccn,                    &
-        ntrw, ntsw, ntgl, nthl, ntwa, ntoz,                                    &
+        ntrw, ntsw, ntgl, nthl, ntwa, ntoz, ntsmoke, ntdust,                   &
         ntclamt, nleffr, nieffr, nseffr, lndp_type, kdt,                       &
         imp_physics,imp_physics_nssl, nssl_ccn_on, nssl_invertccn,             &
         imp_physics_thompson, imp_physics_gfdl, imp_physics_zhao_carr,         &
@@ -88,6 +88,7 @@
                                            ntcw, ntiw, ntlnc, ntinc,           &
                                            ntrnc, ntsnc,ntccn,                 &
                                            ntrw, ntsw, ntgl, nthl, ntwa, ntoz, &
+                                           ntsmoke, ntdust,                    &
                                            ntclamt, nleffr, nieffr, nseffr,    &
                                            lndp_type,                          &
                                            kdt, imp_physics,                   &
@@ -136,7 +137,8 @@
                                                           cnvw_in, cnvc_in,    &
                                                           sppt_wts
 
-      real(kind=kind_phys), dimension(:,:,:), intent(in) :: qgrs, aer_nm
+      real(kind=kind_phys), dimension(:,:,:), intent(in) :: qgrs
+      real(kind=kind_phys), dimension(:,:,:), intent(inout) :: aer_nm
 
       real(kind=kind_phys), dimension(:),   intent(inout) :: coszen, coszdg
 
@@ -601,6 +603,19 @@
 !! property profile for radiation.
 
 !check  print *,' in grrad : calling setaer '
+
+!>---   add smoke and dust ---
+       if (aero_dir_fdb) then
+         do k=1,lmk
+           do i=1,im
+             aer_nm(i,k,1 )=aer_nm(i,k,1 )+qgrs(i,k,ntdust )*0.11
+             aer_nm(i,k,2 )=aer_nm(i,k,1 )+qgrs(i,k,ntdust )*0.89
+             aer_nm(i,k,12)=aer_nm(i,k,12)+qgrs(i,k,ntsmoke)*0.01
+             aer_nm(i,k,14)=aer_nm(i,k,14)+qgrs(i,k,ntsmoke)*0.99
+            enddo
+          enddo
+       endif
+!>----------------------------
 
       call setaer (plvl, plyr, prslk1, tvly, rhly, slmsk,    & !  ---  inputs
                    tracer1, aer_nm, xlon, xlat, IM, LMK, LMP,&
