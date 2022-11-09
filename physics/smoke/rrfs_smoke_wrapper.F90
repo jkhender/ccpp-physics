@@ -380,7 +380,7 @@ contains
     hwp = 0.
     do i=its,ite
       wdgust(i)=max(1.68*sqrt(us3d(i,1)**2+vs3d(i,1)**2),3.)
-      snoweq(i)=max((25.-snow(i)*1000.)/25.,0.)
+      snoweq(i)=max((25.-snow(i))/25.,0.)
       hwp(i)=0.237*wdgust(i)**1.11*max(t2m(i)-dpt2m(i),15.)**0.92*((1.-wetness(i))**6.95)*snoweq(i) ! Eric 08/2022
     enddo
     
