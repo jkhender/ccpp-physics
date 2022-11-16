@@ -263,9 +263,9 @@
   kind = kind_phys
   intent = in
 [snow]
-  standard_name = lwe_thickness_of_snow_amount
-  long_name = snow fall on physics timestep
-  units = m
+  standard_name = lwe_surface_snow
+  long_name = water equivalent snow depth
+  units = mm
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys

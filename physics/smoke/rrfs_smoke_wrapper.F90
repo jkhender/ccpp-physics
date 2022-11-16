@@ -380,7 +380,7 @@ contains
     hwp = 0.
     do i=its,ite
       wdgust(i)=max(1.68*sqrt(us3d(i,1)**2+vs3d(i,1)**2),3.)
-      snoweq(i)=max((25.-snow(i)*1000.)/25.,0.)
+      snoweq(i)=max((25.-snow(i))/25.,0.)
       hwp(i)=0.237*wdgust(i)**1.11*max(t2m(i)-dpt2m(i),15.)**0.92*((1.-wetness(i))**6.95)*snoweq(i) ! Eric 08/2022
     enddo
     
@@ -691,12 +691,12 @@ contains
       emis_anoc(i) = emi_in(i,1)
     enddo
 
-    if (hour_int<=24) then
+    if (hour_int<24) then
         do j=jts,jte
          do i=its,ite
-          ebb_smoke_hr(i)  = smoke_RRFS(i,int(gmt)+1,1) ! smoke
-          frp_hr      (i)  = smoke_RRFS(i,int(gmt)+1,2) ! frp
-          frp_std_hr  (i)  = smoke_RRFS(i,int(gmt)+1,3) ! std frp
+          ebb_smoke_hr(i)  = smoke_RRFS(i,hour_int+1,1) ! smoke
+          frp_hr      (i)  = smoke_RRFS(i,hour_int+1,2) ! frp
+          frp_std_hr  (i)  = smoke_RRFS(i,hour_int+1,3) ! std frp
           ebu_in    (i,j)  = ebb_smoke_hr(i)
           plume_frp(i,j,p_frp_hr     ) = conv_frp* frp_hr  (i)
           plume_frp(i,j,p_frp_std    ) = conv_frp* frp_std_hr  (i)
