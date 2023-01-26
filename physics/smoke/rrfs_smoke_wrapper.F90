@@ -12,6 +12,7 @@
    use plume_data_mod
    use module_plumerise1 !plume_rise_mod
    use module_add_emiss_burn
+   use coarsepm_settling_mod
    use dep_dry_mod
    use module_wetdep_ls
 
@@ -23,13 +24,13 @@
 
 contains
 
-!>\defgroup rrfs_smoke_wrapper GSD Chem emission driver Module  
+!>\defgroup rrfs_smoke_wrapper rrfs-sd emission driver Module
 !> \ingroup gsd_chem_group
-!! This is the GSD Chem emission driver Module
+!! This is the rrfs-sd emission driver Module
 !! \section arg_table_rrfs_smoke_wrapper_run Argument Table
 !! \htmlinclude rrfs_smoke_wrapper_run.html
 !!
-!>\section rrfs_smoke_wrapper GSD Chemistry Scheme General Algorithm
+!>\section rrfs_smoke_wrapper rrfs-sd Scheme General Algorithm
 !> @{
     subroutine rrfs_smoke_wrapper_run(im, kte, kme, ktau, dt, garea, land, jdate,          &
                    u10m, v10m, ustar, rlat, rlon, tskin, pb2d, t2m, dpt2m,                 &
@@ -37,13 +38,13 @@ contains
                    nsoil, smc, vegtype, soiltyp, sigmaf, dswsfc, zorl,snow,                &
                    julian, idat, rain_cpl, rainc_cpl, exch, hf2d, g, pi, con_cp, con_rd,   &
                    dust12m_in, emi_in, smoke_RRFS, ntrac, qgrs, gq0, chem3d, tile_num,     &
-                   ntsmoke, ntdust, imp_physics, imp_physics_thompson,                     &
-                   nwfa, nifa, emanoc,                                                     &
-                   emdust, emseas, ebb_smoke_hr, frp_hr, frp_std_hr,                       &
+                   ntsmoke, ntdust, ntcoarsepm, imp_physics, imp_physics_thompson,         &
+                   nwfa, nifa, emanoc, aodtot, emdust, emcoarsepm, emseas,                 &
+                   ebb_smoke_hr, frp_hr, frp_std_hr,                                       &
                    coef_bb, ebu_smoke,fhist, min_fplume, max_fplume, hwp, wetness,         &
-                   smoke_ext, dust_ext, ndvel, ddvel_inout,rrfs_sd,                        &
+                   smoke_ext, dust_ext, ndvel, aerodp, ddvel_inout,rrfs_sd,                &
                    dust_alpha_in, dust_gamma_in, fire_in,                                  &
-                   seas_opt_in, dust_opt_in, drydep_opt_in,                                &
+                   seas_opt_in, dust_opt_in, drydep_opt_in, coarsepm_settling_in,          &
                    do_plumerise_in, plumerisefire_frq_in, addsmoke_flag_in,                &
                    wetdep_ls_opt_in,wetdep_ls_alpha_in,                                    &
                    smoke_forecast_in, aero_ind_fdb_in,dbg_opt_in,errmsg,errflg)
@@ -52,7 +53,7 @@ contains
 
 
     integer,        intent(in) :: im,kte,kme,ktau,nsoil,tile_num,jdate(8),idat(8)
-    integer,        intent(in) :: ntrac, ntsmoke, ntdust, ndvel
+    integer,        intent(in) :: ntrac, ntsmoke, ntdust, ntcoarsepm, ndvel
     real(kind_phys),intent(in) :: dt, julian, g, pi, con_cp, con_rd
     logical,        intent(in) :: aero_ind_fdb_in,dbg_opt_in
     integer,        intent(in) :: smoke_forecast_in
@@ -74,7 +75,7 @@ contains
                 us3d, vs3d, spechum, exch, w
     real(kind_phys), dimension(:,:,:), intent(inout) :: qgrs, gq0
     real(kind_phys), dimension(:,:,:), intent(inout) :: chem3d
-    real(kind_phys), dimension(:), intent(inout) :: emdust, emseas, emanoc
+    real(kind_phys), dimension(:), intent(inout) :: aodtot, emdust, emcoarsepm, emseas, emanoc
     real(kind_phys), dimension(:), intent(inout) :: ebb_smoke_hr, frp_hr, frp_std_hr
     real(kind_phys), dimension(:), intent(inout) :: coef_bb, fhist
     real(kind_phys), dimension(:,:), intent(inout) :: ebu_smoke
@@ -84,11 +85,12 @@ contains
     real(kind_phys), dimension(:,:), intent(out) :: smoke_ext, dust_ext
     real(kind_phys), dimension(:,:), intent(inout) :: nwfa, nifa
     real(kind_phys), dimension(:,:), intent(inout) :: ddvel_inout
+    real(kind_phys), dimension(:,:), intent(in) :: aerodp
     real (kind=kind_phys), dimension(:), intent(in) :: wetness
     integer, intent(in   ) :: imp_physics, imp_physics_thompson
     real (kind=kind_phys), intent(in) :: dust_alpha_in, dust_gamma_in, wetdep_ls_alpha_in
-    integer,        intent(in) :: seas_opt_in, dust_opt_in,                       &
-                                  drydep_opt_in, plumerisefire_frq_in,            &
+    integer,        intent(in) :: seas_opt_in, dust_opt_in, drydep_opt_in,        &
+                                  coarsepm_settling_in, plumerisefire_frq_in,     &
                                   addsmoke_flag_in, wetdep_ls_opt_in
     logical, intent(in   ) :: do_plumerise_in, rrfs_sd
     character(len=*), intent(out) :: errmsg
@@ -131,6 +133,7 @@ contains
 
 !>-- anthropogentic variables
     real(kind_phys), dimension(ims:im) :: emis_anoc
+    real(kind_phys), dimension(ims:im, jms:jme, 1) :: sedim
 
     real(kind_phys) :: gmt
 
@@ -170,6 +173,7 @@ contains
     dbg_opt           = dbg_opt_in
     wetdep_ls_opt     = wetdep_ls_opt_in
     wetdep_ls_alpha   = wetdep_ls_alpha_in
+    coarsepm_settling = coarsepm_settling_in
 
     ! -- set domain
     ide=im 
@@ -229,7 +233,7 @@ contains
         z_at_w,vvel,zmid,                                               &
         ntrac,gq0,                                                      &
         num_chem,num_moist,                                             &
-        ntsmoke, ntdust,                                                &
+        ntsmoke, ntdust,ntcoarsepm,                                     &
         moist,chem,plume_frp,ebu_in,                                    &
         ebb_smoke_hr, frp_hr, frp_std_hr, emis_anoc,                    &
         smois,ivgtyp,isltyp,vegfrac,rmol,swdown,znt,hfx,pbl,            &
@@ -306,7 +310,7 @@ contains
        call gocart_dust_fengsha_driver(dt,chem,rho_phy,smois,p8w,ssm,   &
             isltyp,vegfrac,snowh,xland,dxy,g,emis_dust,ust,znt,         &
             clayf,sandf,rdrag,uthr,                                     &
-            num_emis_dust,num_moist,num_chem,nsoil,                     &
+            num_emis_dust,num_chem,nsoil,                               &
             ids,ide, jds,jde, kds,kde,                                  &
             ims,ime, jms,jme, kms,kme,                                  &
             its,ite, jts,jte, kts,kte)
@@ -344,9 +348,20 @@ contains
                        its,ite, jts,jte, kts,kte                     )
     endif
 
+    !>-- compute coarsepm setting
+    if (coarsepm_settling == 1) then
+    call coarsepm_settling_driver(dt,t_phy,rel_hum,                  &
+                                  chem(:,:,:,p_coarse_pm),           &
+                                  rho_phy,dz8w,p8w,p_phy,sedim,      &
+                                  dxy,g,1,                           &
+                                  ids,ide, jds,jde, kds,kde,         &
+                                  ims,ime, jms,jme, kms,kme,         &
+                                  its,ite, jts,jte, kts,kte          )
+    endif
     !>-- compute dry deposition
     if (drydep_opt == 1) then
-    call dry_dep_driver(rmol,ust,ndvel,ddvel,rel_hum,           &
+
+    call dry_dep_driver(rmol,ust,ndvel,ddvel,rel_hum,                &
        ids,ide, jds,jde, kds,kde,                                    &
        ims,ime, jms,jme, kms,kme,                                    &
        its,ite, jts,jte, kts,kte)
@@ -397,27 +412,34 @@ contains
      do i=its,ite
        gq0(i,k,ntsmoke )= max(epsilc,chem(i,k,1,p_smoke )) 
        gq0(i,k,ntdust  )= max(epsilc,chem(i,k,1,p_dust_1))
+       gq0(i,k,ntcoarsepm)= max(epsilc,chem(i,k,1,p_coarse_pm))
      enddo
     enddo
 
     do k=kts,kte
      do i=its,ite
-       qgrs(i,k,ntsmoke )= gq0(i,k,ntsmoke ) 
-       qgrs(i,k,ntdust  )= gq0(i,k,ntdust  ) 
-       chem3d(i,k,1     )= gq0(i,k,ntsmoke )
-       chem3d(i,k,2     )= gq0(i,k,ntdust  )
+       qgrs(i,k,ntsmoke   )= gq0(i,k,ntsmoke )
+       qgrs(i,k,ntdust    )= gq0(i,k,ntdust  )
+       qgrs(i,k,ntcoarsepm)= gq0(i,k,ntcoarsepm)
+       chem3d(i,k,1       )= gq0(i,k,ntsmoke )
+       chem3d(i,k,2       )= gq0(i,k,ntdust  )
+       chem3d(i,k,3       )= gq0(i,k,ntcoarsepm)
      enddo
     enddo
 !-------------------------------------
 !-- to output for diagnostics
     do i = 1, im
+     aodtot     (i) = aerodp(i,1)
      emseas     (i) = emis_seas  (i,1,1,1)*1.e+9   ! size bin 1 sea salt emission: ug/m2/s
-     emdust     (i) = emis_dust  (i,1,1,1)         ! size bin 1 dust emission    : ug/m2/s
+     emdust     (i) = emis_dust  (i,1,1,1)         ! fine dust emission    : ug/m2/s
+     emcoarsepm (i) = emis_dust  (i,1,1,5)         ! coarse dust emission  : ug/m2/s
      emanoc     (i) = emis_anoc   (i)              ! anthropogenic organic carbon: ug/m2/s
      coef_bb    (i) = coef_bb_dc (i,1)
      fhist      (i) = fire_hist  (i,1)
      min_fplume (i) = real(min_fplume2(i,1))
      max_fplume (i) = real(max_fplume2(i,1))
+     emseas     (i) = sandf(i,1) ! sand for dust
+     emanoc     (i) = uthr (i,1) ! u threshold for dust
     enddo
 
     do i = 1, im
@@ -429,24 +451,25 @@ contains
       fact_wfa = 1.e-9*6.0/pi*exp(4.5*log(sigma1)**2)/mean_diameter1**3
       fact_ifa = 1.e-9*6.0/pi*exp(4.5*log(sigma2)**2)/mean_diameter2**3
 
-      do i = its, ite
-       do k = kts, kte
-        if (k==1)then
-         daero_emis_wfa =(emanoc(i)+ebu_smoke(i,k))/density_oc + emseas(i)/density_seasalt
-        else
-         daero_emis_wfa = ebu_smoke(i,k)/density_oc 
-        endif
-         daero_emis_wfa = kappa_oc* daero_emis_wfa*fact_wfa*rri(i,k,1)/dz8w(i,k,1) ! consider  using dust tracer
+      do i = 1, im
+         daero_emis_wfa(i) =(emanoc(i)+ebu_smoke(i,kemit))/density_oc + emseas(i)/density_seasalt
+         daero_emis_ifa(i) = emdust(i)/density_dust
 
-         nwfa(i,k)      = nwfa(i,k) + daero_emis_wfa*dt
-         nifa(i,k)      = gq0(i,k,ntdust)/density_dust*fact_ifa*kappa_dust  ! Check the formula
+         daero_emis_wfa(i) = daero_emis_wfa(i)*fact_wfa*rri(i,kemit,1)/dz8w(i,kemit,1)
+         daero_emis_ifa(i) = daero_emis_ifa(i)*fact_ifa*rri(i,kemit,1)/dz8w(i,kemit,1)
+
+         nwfa(i,kemit)     = nwfa(i,kemit) + daero_emis_wfa(i)*dt
+         nifa(i,kemit)     = nifa(i,kemit) + daero_emis_ifa(i)*dt
 
         if(land(i).eq.1)then
-         nwfa(i,k)      = nwfa(i,k)*(1 - 0.10*dt/86400.)  !-- mimicking dry deposition
+         nwfa(i,kemit)    = nwfa(i,kemit)*(1. - 0.10*dt/86400.)  !-- mimicking dry deposition
+         nifa(i,kemit)    = nifa(i,kemit)*(1. - 0.10*dt/86400.)  !-- mimicking dry deposition
         else
-         nwfa(i,k)      = nwfa(i,k)*(1 - 0.05*dt/86400.)  !-- mimicking dry deposition
+         nwfa(i,kemit)    = nwfa(i,kemit)*(1. - 0.05*dt/86400.)  !-- mimicking dry deposition
+         nifa(i,kemit)    = nifa(i,kemit)*(1. - 0.05*dt/86400.)  !-- mimicking dry deposition
         endif
-       enddo
+         nwfa(i,kemit)    = MIN(2.E10,nwfa(i,kemit))
+         nifa(i,kemit)    = MIN(9999.E6,nifa(i,kemit))
       enddo
     endif
 
@@ -465,7 +488,7 @@ contains
         z_at_w,vvel,zmid,                                               &
         ntrac,gq0,                                                      &
         num_chem, num_moist,                                            &
-        ntsmoke, ntdust,                                                &
+        ntsmoke, ntdust, ntcoarsepm,                                    &
         moist,chem,plume_frp,ebu_in,                                    &
         ebb_smoke_hr, frp_hr, frp_std_hr, emis_anoc,                    &
         smois,ivgtyp,isltyp,vegfrac,rmol,swdown,znt,hfx,pbl,            &
@@ -495,8 +518,8 @@ contains
     real(kind=kind_phys), dimension(ims:ime, kts:kte,ntrac), intent(in) :: gq0
 
 
-    !GSD Chem variables
-    integer,intent(in) ::  num_chem, num_moist, ntsmoke, ntdust
+    !rrfs-sd variables
+    integer,intent(in) ::  num_chem, num_moist, ntsmoke, ntdust, ntcoarsepm
     integer,intent(in) ::  ids,ide, jds,jde, kds,kde,                      &
                            ims,ime, jms,jme, kms,kme,                      &
                            its,ite, jts,jte, kts,kte
@@ -656,7 +679,10 @@ contains
             moist(i,k,j,3)=gq0(i,kkp,p_atm_cldq)
             if(moist(i,k,j,3) < 1.e-8)moist(i,k,j,3)=0.
           endif
-          rel_hum(i,k,j) = min(0.95,spechum(i,kkp))
+          !rel_hum(i,k,j) = min(0.95,spechum(i,kkp))
+          rel_hum(i,k,j) = min(0.95, moist(i,k,j,1) / &
+            (3.80*exp(17.27*(t_phy(i,k,j)-273.)/ &
+            (t_phy(i,k,j)-36.))/(.01*p_phy(i,k,j))))
           rel_hum(i,k,j) = max(0.1,rel_hum(i,k,j))
           !--
           zmid(i,k,j)=phl3d(i,kkp)/g
@@ -698,8 +724,8 @@ contains
           frp_hr      (i)  = smoke_RRFS(i,hour_int+1,2) ! frp
           frp_std_hr  (i)  = smoke_RRFS(i,hour_int+1,3) ! std frp
           ebu_in    (i,j)  = ebb_smoke_hr(i)
-          plume_frp(i,j,p_frp_hr     ) = conv_frp* frp_hr  (i)
-          plume_frp(i,j,p_frp_std    ) = conv_frp* frp_std_hr  (i)
+          plume_frp(i,j,p_frp_hr ) = conv_frp* frp_hr      (i)
+          plume_frp(i,j,p_frp_std) = conv_frp* frp_std_hr  (i)
          enddo
         enddo
     endif
@@ -708,8 +734,9 @@ contains
 
     do k=kms,kte
      do i=ims,ime
-       chem(i,k,jts,p_smoke )=max(epsilc,gq0(i,k,ntsmoke))
-       chem(i,k,jts,p_dust_1)=max(epsilc,gq0(i,k,ntdust ))
+       chem(i,k,jts,p_smoke    )=max(epsilc,gq0(i,k,ntsmoke   ))
+       chem(i,k,jts,p_dust_1   )=max(epsilc,gq0(i,k,ntdust    ))
+       chem(i,k,jts,p_coarse_pm)=max(epsilc,gq0(i,k,ntcoarsepm))
      enddo
     enddo
  

@@ -152,9 +152,9 @@ END IF
     !- loop over the minimum and maximum heat fluxes/FRP
     lp_minmax: do imm=1,2
         if(imm==1 ) then
-          burnt_area = 0.7* 0.00021* FRP          ! - 0.5*plume_fre(istd_fsize))
+          burnt_area = 0.7* 0.0006* FRP   !    0.00021* FRP          ! - 0.5*plume_fre(istd_fsize))
         elseif(imm==2 ) then
-          burnt_area = 1.3* 0.00021* FRP
+          burnt_area = 1.3* 0.0006* FRP   ! RAR: Based on Laura's paper I increased the fire size *3. This should depend on the fuel type and meteorology/HWP
         endif
         burnt_area= max(1.0e4,burnt_area)
         
@@ -440,23 +440,24 @@ implicit none
 type(plumegen_coms), pointer :: coms
 integer ::  moist,  i,  icount,imm,iveg_ag  !,plumerise_flag
 real(kind=kind_phys)::   bfract,  effload,  heat,  hinc ,burnt_area,heat_fluxW,FRP
-real(kind=kind_phys),    dimension(2,4) :: heat_flux
+!real(kind=kind_phys),    dimension(2,4) :: heat_flux
 integer, intent(inout) :: errflg
 character(*), intent(inout) :: errmsg
-INTEGER, parameter :: use_last = 0
+INTEGER, parameter :: use_last = 1    ! RAR 10/31/2022: I set to one, checking with Saulo
+
 !real(kind=kind_phys), parameter :: beta = 5.0   !ref.: Wooster et al., 2005
 REAL(kind=kind_phys), parameter :: beta = 0.88  !ref.: Paugam et al., 2015
 
-data heat_flux/  &
+!data heat_flux/  &  RAR: not used
 !---------------------------------------------------------------------
 !  heat flux      !IGBP Land Cover	    !
 ! min  ! max      !Legend and		    ! reference
 !    kW/m^2       !description  	    !
 !--------------------------------------------------------------------
-30.0, 80.0,   &! Tropical Forest         ! igbp 2 & 4
-30.0, 80.0,   &! Boreal(kind=kind_phys) forest           ! igbp 1 & 3
-4.4,  23.0,   &! cerrado/woody savanna   | igbp  5 thru 9
-3.3,  3.3     /! Grassland/cropland      ! igbp 10 thru 17
+!30.0, 80.0,   &! Tropical Forest         ! igbp 2 & 4
+!30.0, 80.0,   &! Boreal(kind=kind_phys) forest           ! igbp 1 & 3
+!4.4,  23.0,   &! cerrado/woody savanna   | igbp  5 thru 9
+!3.3,  3.3     /! Grassland/cropland      ! igbp 10 thru 17
 !--------------------------------------------------------------------
 !-- fire at surface
 !
@@ -549,7 +550,7 @@ COMS%FMOIST   = MOIST / 100.       !- fuel moisture fraction
    COMS%HEATING (ICOUNT) = heat_fluxW  * 0.55     ! W/m**2 (0.55 converte para energia convectiva)
    ICOUNT = ICOUNT + 1  
   ENDDO  
-!     ramp for 5 minutes
+!     ramp for 5 minutes, RAR: in the current version this is inactive
  IF(use_last /= 1) THEN
 
     HINC = COMS%HEATING (1) / 4.  
@@ -565,8 +566,9 @@ COMS%FMOIST   = MOIST / 100.       !- fuel moisture fraction
        COMS%HEATING (3) = 2. * HINC  
        COMS%HEATING (4) = 3. * HINC 
     ELSE 
-       HINC = (COMS%HEATING (1) - heat_flux(imm-1,iveg_ag) * 1000. *0.55)/ 4.
-       COMS%HEATING (1) = heat_flux(imm-1,iveg_ag) * 1000. *0.55 + 0.1  
+    ! RAR: I've commented out so we don't use the look-up table for heat flux
+    !   HINC = (COMS%HEATING (1) - heat_flux(imm-1,iveg_ag) * 1000. *0.55)/ 4.
+    !   COMS%HEATING (1) = heat_flux(imm-1,iveg_ag) * 1000. *0.55 + 0.1
        COMS%HEATING (2) = COMS%HEATING (1)+ HINC  
        COMS%HEATING (3) = COMS%HEATING (2)+ HINC  
        COMS%HEATING (4) = COMS%HEATING (3)+ HINC 

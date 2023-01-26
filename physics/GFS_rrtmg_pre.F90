@@ -608,10 +608,10 @@
        if (aero_dir_fdb) then
          do k=1,lmk
            do i=1,im
-             aer_nm(i,k,1 )=aer_nm(i,k,1 )+qgrs(i,k,ntdust )*0.11
-             aer_nm(i,k,2 )=aer_nm(i,k,1 )+qgrs(i,k,ntdust )*0.89
-             aer_nm(i,k,12)=aer_nm(i,k,12)+qgrs(i,k,ntsmoke)*0.01
-             aer_nm(i,k,14)=aer_nm(i,k,14)+qgrs(i,k,ntsmoke)*0.99
+             aer_nm(i,k,1 )=aer_nm(i,k,1 )+qgrs(i,k,ntdust )*1.e-9*0.11
+             aer_nm(i,k,2 )=aer_nm(i,k,1 )+qgrs(i,k,ntdust )*1.e-9*0.89
+             aer_nm(i,k,12)=aer_nm(i,k,12)+qgrs(i,k,ntsmoke)*1.e-9*0.01
+             aer_nm(i,k,14)=aer_nm(i,k,14)+qgrs(i,k,ntsmoke)*1.e-9*0.99
             enddo
           enddo
        endif

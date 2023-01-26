@@ -24,7 +24,7 @@ contains
        chem,rho_phy,smois,p8w,ssm,                       &
        isltyp,vegfra,snowh,xland,area,g,emis_dust,       &
        ust,znt,clay,sand,rdrag,uthr,                     &
-       num_emis_dust,num_moist,num_chem,num_soil_layers, &
+       num_emis_dust,num_chem,num_soil_layers,           &
        ids,ide, jds,jde, kds,kde,                        &
        ims,ime, jms,jme, kms,kme,                        &
        its,ite, jts,jte, kts,kte)
@@ -33,7 +33,7 @@ contains
          ids,ide, jds,jde, kds,kde,                      &
          ims,ime, jms,jme, kms,kme,                      &
          its,ite, jts,jte, kts,kte,                      &
-         num_emis_dust,num_moist,num_chem,num_soil_layers
+         num_emis_dust,num_chem,num_soil_layers
 
     ! 2d input variables
     REAL(kind_phys), DIMENSION( ims:ime , jms:jme ), INTENT(IN) :: ssm     ! Sediment supply map
@@ -448,7 +448,8 @@ contains
        bems(n) = 1.e+9*dsrc/(dxy*dt1) ! diagnostic (ug/m2/s) !lzhang
        
     END DO
-    tc(1)=tc(1)+tc(2) ! This is just for RRFS-SD. DO NOT use in other models!!!
+    tc(1)=tc(1)+0.286*tc(2)       ! This is just for RRFS-SD. DO NOT use in other models!!!
+    tc(5)=0.714*tc(2)+tc(3)+tc(4) ! This is just for RRFS-SD. DO NOT use in other models!!!
 
   END SUBROUTINE source_dust
 
