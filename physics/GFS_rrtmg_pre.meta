@@ -219,6 +219,13 @@
   dimensions = ()
   type = integer
   intent = in
+[ntcoarsepm]
+  standard_name = index_for_coarse_pm_in_tracer_concentration_array
+  long_name = tracer index for coarse pm
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
 [nssl_ccn_on]
   standard_name = nssl_ccn_on
   long_name = CCN activation flag in NSSL micro

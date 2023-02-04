@@ -387,24 +387,19 @@ contains
 
     ! Set DRY threshold friction velocity to input value
     u_ts0 = uthres
-
-    ! g = g0*1.0E2
     g = g0
+
+    call DustEmissionFENGSHA(smois,massfrac(1),massfrac(3), massfrac(2), &
+                                erod, R, airden, ustar, uthres, alpha, gamma, kvhmax, &
+                                g, RHOSOIL, salt)
+
     emit=0.0
+    emit = emit + salt
 
     DO n = 1, smx
        den(n) = den_salt(n)*1.0D-3         ! (g cm^-3)
        diam(n) = 2.0*reff_salt(n)*1.0D2    ! (cm)
-       !rhoa = airden*1.0D-3                ! (g cm^-3)
-       rhoa = airden
-       call DustEmissionFENGSHA(smois,massfrac(1),massfrac(3), massfrac(2), &
-                                erod, R, rhoa, ustar, uthres, alpha, gamma, kvhmax, & 
-                                g, RHOSOIL, salt)
-
        saltbin(n) = salt * cmb * ds_rel(n)
-       
-       ! EROD is taken into account above
-       emit = emit + salt 
     END DO
 
     ! Now that we have the total dust emission, distribute into dust bins using

@@ -39,7 +39,7 @@ contains
                    julian, idat, rain_cpl, rainc_cpl, exch, hf2d, g, pi, con_cp, con_rd,   &
                    dust12m_in, emi_in, smoke_RRFS, ntrac, qgrs, gq0, chem3d, tile_num,     &
                    ntsmoke, ntdust, ntcoarsepm, imp_physics, imp_physics_thompson,         &
-                   nwfa, nifa, emanoc, aodtot, emdust, emcoarsepm, emseas,                 &
+                   nwfa, nifa, emanoc, aodtot, emdust, emseas,                             &
                    ebb_smoke_hr, frp_hr, frp_std_hr,                                       &
                    coef_bb, ebu_smoke,fhist, min_fplume, max_fplume, hwp, wetness,         &
                    smoke_ext, dust_ext, ndvel, aerodp, ddvel_inout,rrfs_sd,                &
@@ -67,15 +67,15 @@ contains
     real(kind_phys), dimension(:,:,:), intent(in) :: dust12m_in
     real(kind_phys), dimension(:,:,:), intent(in) :: smoke_RRFS
     real(kind_phys), dimension(:,:), intent(in) :: emi_in
-    real(kind_phys), dimension(:), intent(in) :: u10m, v10m, ustar, dswsfc,      &
-                garea, rlat,rlon, tskin, pb2d, sigmaf, zorl, snow,                &
+    real(kind_phys), dimension(:), intent(in) :: u10m, v10m, ustar, dswsfc,    &
+                garea, rlat,rlon, tskin, pb2d, sigmaf, zorl, snow,             &
                 rain_cpl, rainc_cpl, hf2d, t2m, dpt2m
     real(kind_phys), dimension(:,:), intent(in) :: ph3d, pr3d
     real(kind_phys), dimension(:,:), intent(in) :: phl3d, prl3d, tk3d,         &
                 us3d, vs3d, spechum, exch, w
     real(kind_phys), dimension(:,:,:), intent(inout) :: qgrs, gq0
     real(kind_phys), dimension(:,:,:), intent(inout) :: chem3d
-    real(kind_phys), dimension(:), intent(inout) :: aodtot, emdust, emcoarsepm, emseas, emanoc
+    real(kind_phys), dimension(:), intent(inout) :: aodtot, emdust, emseas, emanoc
     real(kind_phys), dimension(:), intent(inout) :: ebb_smoke_hr, frp_hr, frp_std_hr
     real(kind_phys), dimension(:), intent(inout) :: coef_bb, fhist
     real(kind_phys), dimension(:,:), intent(inout) :: ebu_smoke
@@ -147,13 +147,13 @@ contains
     real(kind_phys), parameter :: density_dust= 2.6e+3, density_sulfate=1.8e+3
     real(kind_phys), parameter :: density_oc  = 1.4e+3, density_seasalt=2.2e+3
 
-    real(kind_phys) :: daero_emis_wfa, daero_emis_ifa
+    real(kind_phys), dimension(im) :: daero_emis_wfa, daero_emis_ifa
 !>-- local variables
     real(kind_phys), dimension(im) :: wdgust, snoweq
     integer :: current_month, current_hour, hour_int
     real(kind_phys) :: curr_secs
     real(kind_phys) :: factor, factor2, factor3
-    integer :: nbegin, nv, nvv
+    integer :: nbegin, nv
     integer :: i, j, k, kp, n
 
     errmsg = ''
@@ -189,6 +189,8 @@ contains
     flam_frac   = 0.
     ext3d_smoke = 0.
     ext3d_dust  = 0.
+    daero_emis_wfa = 0.
+    daero_emis_ifa = 0.
 
     rcav = 0.
     rnav = 0.
@@ -430,12 +432,12 @@ contains
 !-- to output for diagnostics
     do i = 1, im
      aodtot     (i) = aerodp(i,1)
-     emseas     (i) = emis_seas  (i,1,1,1)*1.e+9   ! size bin 1 sea salt emission: ug/m2/s
-     emdust     (i) = emis_dust  (i,1,1,1)         ! fine dust emission    : ug/m2/s
-     emcoarsepm (i) = emis_dust  (i,1,1,5)         ! coarse dust emission  : ug/m2/s
-     emanoc     (i) = emis_anoc   (i)              ! anthropogenic organic carbon: ug/m2/s
-     coef_bb    (i) = coef_bb_dc (i,1)
-     fhist      (i) = fire_hist  (i,1)
+     emseas     (i) = emis_seas(i,1,1,1)*1.e+9   ! size bin 1 sea salt emission: ug/m2/s
+     emdust     (i) = emis_dust(i,1,1,1) + emis_dust(i,1,1,2) +   &
+                      emis_dust(i,1,1,3) + emis_dust(i,1,1,4) ! dust emission: ug/m2/s
+     emanoc     (i) = emis_anoc (i)              ! anthropogenic organic carbon: ug/m2/s
+     coef_bb    (i) = coef_bb_dc(i,1)
+     fhist      (i) = fire_hist (i,1)
      min_fplume (i) = real(min_fplume2(i,1))
      max_fplume (i) = real(max_fplume2(i,1))
      emseas     (i) = sandf(i,1) ! sand for dust
