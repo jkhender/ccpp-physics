@@ -1347,7 +1347,7 @@
   standard_name = chem3d_mynn_pbl_transport
   long_name = mynn pbl transport of smoke and dust
   units = various
-  dimensions = (horizontal_loop_extent,vertical_layer_dimension,ndvel)
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension,3)
   type = real
   kind = kind_phys
   intent = inout
