@@ -559,8 +559,9 @@ COMS%FMOIST   = MOIST / 100.       !- fuel moisture fraction
     COMS%HEATING (3) = 2. * HINC  
     COMS%HEATING (4) = 3. * HINC  
  ELSE
+    HINC = COMS%HEATING (1) / 4.   ! RAR: this needs to be revised later
     IF(imm==1) THEN
-       HINC = COMS%HEATING (1) / 4.  
+       !HINC = COMS%HEATING (1) / 4.
        COMS%HEATING (1) = 0.1  
        COMS%HEATING (2) = HINC  
        COMS%HEATING (3) = 2. * HINC  
