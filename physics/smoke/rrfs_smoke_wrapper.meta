@@ -1,7 +1,7 @@
 [ccpp-table-properties]
   name = rrfs_smoke_wrapper
   type = scheme
-  dependencies = dep_dry_mod.F90,module_wetdep_ls.F90,dust_data_mod.F90,dust_fengsha_mod.F90,module_add_emiss_burn.F90,module_plumerise1.F90,module_smoke_plumerise.F90,module_zero_plumegen_coms.F90,plume_data_mod.F90,rrfs_smoke_config.F90,seas_data_mod.F90,seas_mod.F90,seas_ngac_mod.F90
+  dependencies = dep_dry_mod.F90,module_wetdep_ls.F90,dust_data_mod.F90,dust_fengsha_mod.F90,module_add_emiss_burn.F90,module_plumerise1.F90,module_smoke_plumerise.F90,module_zero_plumegen_coms.F90,plume_data_mod.F90,rrfs_smoke_config.F90,seas_data_mod.F90,seas_mod.F90,seas_ngac_mod.F90,coarsepm_settling_mod.F90
 
 ########################################################################
 [ccpp-arg-table]
@@ -400,7 +400,7 @@
   standard_name = chem3d_mynn_pbl_transport
   long_name = mynn pbl transport of smoke and dust
   units = various
-  dimensions = (horizontal_loop_extent,vertical_layer_dimension,2)
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension,3)
   type = real
   kind = kind_phys
   intent = inout
@@ -421,6 +421,13 @@
 [ntdust]
   standard_name = index_for_dust_in_tracer_concentration_array
   long_name = tracer index for dust
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[ntcoarsepm]
+  standard_name = index_for_coarse_pm_in_tracer_concentration_array
+  long_name = tracer index for coarse pm
   units = index
   dimensions = ()
   type = integer
@@ -459,6 +466,14 @@
   standard_name = emission_of_anoc_for_thompson_mp
   long_name = emission of anoc for thompson mp
   units = ug m-2 s-1
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  intent = inout
+[aodtot]
+  standard_name = total_aod_from_aerosols
+  long_name = totol aod from aerosols
+  units = none
   dimensions = (horizontal_loop_extent)
   type = real
   kind = kind_phys
@@ -582,11 +597,19 @@
   dimensions = ()
   type = integer
   intent = in
+[aerodp]
+  standard_name = atmosphere_optical_thickness_due_to_ambient_aerosol_particles
+  long_name = vertical integrated optical depth for various aerosol species
+  units = none
+  dimensions = (horizontal_loop_extent,number_of_species_for_aerosol_optical_depth)
+  type = real
+  kind = kind_phys
+  intent = in
 [ddvel_inout]
   standard_name = dry_deposition_velocity_mynn_pbl_transport
   long_name = dry deposition velocity by mynn pbl transport
   units = m s-1
-  dimensions = (horizontal_loop_extent,2)
+  dimensions = (horizontal_loop_extent,3)
   type = real
   kind = kind_phys
   intent = inout
@@ -638,6 +661,13 @@
 [drydep_opt_in]
   standard_name = control_for_smoke_dry_deposition
   long_name = rrfs smoke dry deposition option
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[coarsepm_settling_in]
+  standard_name = control_for_smoke_coarsepm_settling
+  long_name = rrfs smoke coarsepm settling option
   units = index
   dimensions = ()
   type = integer

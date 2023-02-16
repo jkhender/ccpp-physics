@@ -18,13 +18,13 @@ contains
 !> \section arg_table_rrfs_smoke_postpbl_run Argument Table
 !! \htmlinclude rrfs_smoke_postpbl_run.html
 !!
-    subroutine rrfs_smoke_postpbl_run(ite, kte, ntsmoke, ntdust, ntrac,      &
+    subroutine rrfs_smoke_postpbl_run(ite, kte, ntsmoke, ntdust, ntcoarsepm, ntrac,      &
                    qgrs, chem3d, rrfs_sd, errmsg, errflg)
 
     implicit none
 
 
-    integer,        intent(in) :: ite,kte,ntsmoke,ntdust,ntrac
+    integer,        intent(in) :: ite,kte,ntsmoke,ntdust,ntcoarsepm,ntrac
 
     integer, parameter :: its=1,kts=1
 
@@ -48,6 +48,7 @@ contains
      do i=its,ite
        qgrs(i,k,ntsmoke)= chem3d(i,k,1)
        qgrs(i,k,ntdust )= chem3d(i,k,2)
+       qgrs(i,k,ntcoarsepm)= chem3d(i,k,3)
      enddo
     enddo
 

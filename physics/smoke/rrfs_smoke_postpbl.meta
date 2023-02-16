@@ -35,6 +35,13 @@
   dimensions = ()
   type = integer
   intent = in
+[ntcoarsepm]
+  standard_name = index_for_coarse_pm_in_tracer_concentration_array
+  long_name = tracer index for coarse pm
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
 [ntrac]
   standard_name = number_of_tracers
   long_name = number of tracers
@@ -54,7 +61,7 @@
   standard_name = chem3d_mynn_pbl_transport
   long_name = mynn pbl transport of smoke and dust
   units = various
-  dimensions = (horizontal_loop_extent,vertical_layer_dimension,2)
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension,3)
   type = real
   kind = kind_phys
   intent = inout

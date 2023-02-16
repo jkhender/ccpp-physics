@@ -24,7 +24,7 @@ contains
        chem,rho_phy,smois,p8w,ssm,                       &
        isltyp,vegfra,snowh,xland,area,g,emis_dust,       &
        ust,znt,clay,sand,rdrag,uthr,                     &
-       num_emis_dust,num_moist,num_chem,num_soil_layers, &
+       num_emis_dust,num_chem,num_soil_layers,           &
        ids,ide, jds,jde, kds,kde,                        &
        ims,ime, jms,jme, kms,kme,                        &
        its,ite, jts,jte, kts,kte)
@@ -33,7 +33,7 @@ contains
          ids,ide, jds,jde, kds,kde,                      &
          ims,ime, jms,jme, kms,kme,                      &
          its,ite, jts,jte, kts,kte,                      &
-         num_emis_dust,num_moist,num_chem,num_soil_layers
+         num_emis_dust,num_chem,num_soil_layers
 
     ! 2d input variables
     REAL(kind_phys), DIMENSION( ims:ime , jms:jme ), INTENT(IN) :: ssm     ! Sediment supply map
@@ -387,24 +387,19 @@ contains
 
     ! Set DRY threshold friction velocity to input value
     u_ts0 = uthres
-
-    ! g = g0*1.0E2
     g = g0
+
+    call DustEmissionFENGSHA(smois,massfrac(1),massfrac(3), massfrac(2), &
+                                erod, R, airden, ustar, uthres, alpha, gamma, kvhmax, &
+                                g, RHOSOIL, salt)
+
     emit=0.0
+    emit = emit + salt
 
     DO n = 1, smx
        den(n) = den_salt(n)*1.0D-3         ! (g cm^-3)
        diam(n) = 2.0*reff_salt(n)*1.0D2    ! (cm)
-       !rhoa = airden*1.0D-3                ! (g cm^-3)
-       rhoa = airden
-       call DustEmissionFENGSHA(smois,massfrac(1),massfrac(3), massfrac(2), &
-                                erod, R, rhoa, ustar, uthres, alpha, gamma, kvhmax, & 
-                                g, RHOSOIL, salt)
-
        saltbin(n) = salt * cmb * ds_rel(n)
-       
-       ! EROD is taken into account above
-       emit = emit + salt 
     END DO
 
     ! Now that we have the total dust emission, distribute into dust bins using
@@ -448,7 +443,8 @@ contains
        bems(n) = 1.e+9*dsrc/(dxy*dt1) ! diagnostic (ug/m2/s) !lzhang
        
     END DO
-    tc(1)=tc(1)+tc(2) ! This is just for RRFS-SD. DO NOT use in other models!!!
+    tc(1)=tc(1)+0.286*tc(2)       ! This is just for RRFS-SD. DO NOT use in other models!!!
+    tc(5)=0.714*tc(2)+tc(3)+tc(4) ! This is just for RRFS-SD. DO NOT use in other models!!!
 
   END SUBROUTINE source_dust
 
